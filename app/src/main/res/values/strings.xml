@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Webalizer</string>
+    <string name="title_activity_main">Webalizer Log Analyzer</string>
+</resources>
