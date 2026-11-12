@@ -36,6 +36,14 @@ data class IpDetails(
     val unavailableSources: List<String>
 )
 
+data class IpOrigin(
+    val city: String?,
+    val region: String?,
+    val country: String?,
+    val organization: String?,
+    val isLocal: Boolean = false
+)
+
 sealed class IpLookupResult {
     data class Public(val details: IpDetails) : IpLookupResult()
     data class Local(val address: String, val description: String) : IpLookupResult()
@@ -92,14 +100,9 @@ object IpLookupService {
         val encodedAddress = URLEncoder.encode(normalizedAddress, StandardCharsets.UTF_8.name())
         val unavailableSources = mutableListOf<String>()
 
-        val geo = runCatching {
-            fetchJson("https://ipwho.is/$encodedAddress", "application/json")
-                .also { response ->
-                    if (!response.optBoolean("success", false)) {
-                        error(response.stringOrNull("message") ?: "Geo-Abfrage fehlgeschlagen")
-                    }
-                }
-        }.onFailure { unavailableSources += "Region/ASN" }.getOrNull()
+        val geo = runCatching { fetchGeo(encodedAddress) }
+            .onFailure { unavailableSources += "Region/ASN" }
+            .getOrNull()
 
         val rdap = runCatching {
             fetchJson("https://rdap.org/ip/$encodedAddress", "application/rdap+json")
@@ -142,6 +145,38 @@ object IpLookupService {
                 unavailableSources = unavailableSources
             )
         )
+    }
+
+    fun lookupOrigin(address: String): IpOrigin {
+        val normalizedAddress = address.trim()
+        require(isNumericAddress(normalizedAddress)) { "Keine gültige IP-Adresse" }
+        if (!isPublicAddress(normalizedAddress)) {
+            return IpOrigin(
+                city = null,
+                region = null,
+                country = null,
+                organization = null,
+                isLocal = true
+            )
+        }
+
+        val encodedAddress = URLEncoder.encode(normalizedAddress, StandardCharsets.UTF_8.name())
+        val geo = fetchGeo(encodedAddress)
+        return IpOrigin(
+            city = geo.stringOrNull("city"),
+            region = geo.stringOrNull("region"),
+            country = geo.stringOrNull("country"),
+            organization = geo.optJSONObject("connection")?.stringOrNull("org")
+        )
+    }
+
+    private fun fetchGeo(encodedAddress: String): JSONObject {
+        return fetchJson("https://ipwho.is/$encodedAddress", "application/json")
+            .also { response ->
+                if (!response.optBoolean("success", false)) {
+                    error(response.stringOrNull("message") ?: "Geo-Abfrage fehlgeschlagen")
+                }
+            }
     }
 
     private fun fetchJson(url: String, accept: String): JSONObject {

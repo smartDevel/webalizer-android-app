@@ -15,6 +15,7 @@ internal fun extractLogAddress(line: String): String? {
 
 private const val VISIT_TIMEOUT_MILLIS = 30 * 60 * 1000L
 private const val MAX_SUSPICIOUS_EVENTS = 50
+private const val MAX_SUSPICIOUS_ADDRESSES = 20
 private const val ERROR_BURST_MINIMUM = 20
 private const val ERROR_BURST_RATIO = 0.70
 
@@ -76,6 +77,9 @@ data class SuspiciousAddress(
     val totalHits: Int,
     val clientErrors: Int,
     val suspiciousRequests: Int,
+    val sourceFileCount: Int,
+    val firstTimestamp: Long?,
+    val lastTimestamp: Long?,
     val reasons: Set<SuspicionReason>
 )
 
@@ -92,6 +96,9 @@ private data class AddressRisk(
     var totalHits: Int = 0,
     var clientErrors: Int = 0,
     var suspiciousRequests: Int = 0,
+    var firstTimestamp: Long? = null,
+    var lastTimestamp: Long? = null,
+    val sourceFiles: MutableSet<Int> = mutableSetOf(),
     val reasons: MutableSet<SuspicionReason> = mutableSetOf()
 )
 
@@ -123,7 +130,7 @@ class WebalizerLogParser {
         var lastTimestamp: Long? = null
         var suspiciousRequestCount = 0
 
-        files.forEach { file ->
+        files.forEachIndexed { sourceFileIndex, file ->
             file.bufferedReader().useLines { lines ->
                 lines.forEach lineLoop@{ line ->
                     totalLines++
@@ -146,6 +153,7 @@ class WebalizerLogParser {
 
                     val addressRisk = riskByAddress.getOrPut(ip) { AddressRisk() }
                     addressRisk.totalHits++
+                    addressRisk.sourceFiles += sourceFileIndex
                     if (status in 400..499) {
                         addressRisk.clientErrors++
                     }
@@ -161,6 +169,14 @@ class WebalizerLogParser {
                         firstTimestamp = minOf(firstTimestamp ?: timestampMillis, timestampMillis)
                         lastTimestamp = maxOf(lastTimestamp ?: timestampMillis, timestampMillis)
                         timestampsByAddress.getOrPut(ip) { mutableListOf() } += timestampMillis
+                        addressRisk.firstTimestamp = minOf(
+                            addressRisk.firstTimestamp ?: timestampMillis,
+                            timestampMillis
+                        )
+                        addressRisk.lastTimestamp = maxOf(
+                            addressRisk.lastTimestamp ?: timestampMillis,
+                            timestampMillis
+                        )
 
                         val day = dayFormatter.format(timestamp)
                         val hour = hourFormatter.format(timestamp)
@@ -240,13 +256,16 @@ class WebalizerLogParser {
                 totalHits = risk.totalHits,
                 clientErrors = risk.clientErrors,
                 suspiciousRequests = risk.suspiciousRequests,
+                sourceFileCount = risk.sourceFiles.size,
+                firstTimestamp = risk.firstTimestamp,
+                lastTimestamp = risk.lastTimestamp,
                 reasons = reasons
             )
         }.sortedWith(
             compareByDescending<SuspiciousAddress> { it.suspiciousRequests }
                 .thenByDescending { it.clientErrors }
         )
-        val suspiciousAddresses = allSuspiciousAddresses.take(10)
+        val suspiciousAddresses = allSuspiciousAddresses.take(MAX_SUSPICIOUS_ADDRESSES)
 
         return LogStats(
             totalLines = totalLines,

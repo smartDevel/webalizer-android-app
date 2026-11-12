@@ -23,6 +23,9 @@ Die Sicherheitsauswertung markiert unter anderem sensible Scan-Ziele,
 Traversal-/Injection-Muster, bekannte Scanner-User-Agents, ungewöhnliche
 HTTP-Methoden und Adressen mit vielen 4xx-Antworten. Die Hinweise sind
 heuristisch und stellen keinen automatischen Nachweis eines Angriffs dar.
+Die Top-20-Liste führt auffällige IPs über alle importierten Dateien zusammen
+und zeigt Treffer, betroffene Dateien, Zeitraum sowie eine automatisch geladene,
+ungefähre Orts-/Regionszuordnung.
 
 Der Import nutzt den Android-Systemdialog (Storage Access Framework). Für Google
 Drive muss die Drive-App auf dem Gerät installiert und mit einem Google-Konto

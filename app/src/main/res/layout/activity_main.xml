@@ -182,6 +182,14 @@
                         android:text="@string/security_disclaimer"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/origin_lookup_note"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

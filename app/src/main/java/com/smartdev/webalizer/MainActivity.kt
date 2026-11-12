@@ -57,6 +57,9 @@ class MainActivity : AppCompatActivity() {
     private var currentLogFiles: List<File> = emptyList()
     private var currentImportDirectory: File? = null
     private lateinit var expandableSections: List<ExpandableSection>
+    private var displayedSuspiciousAddresses: List<SuspiciousAddress> = emptyList()
+    private val originCache = mutableMapOf<String, String>()
+    private var originLookupGeneration = 0
 
     private val openLogFiles = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -206,25 +209,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val formattedSuspiciousAddresses: CharSequence = if (stats.suspiciousAddresses.isEmpty()) {
-            getString(R.string.no_suspicious_addresses)
-        } else {
-            buildLinkedItems(
-                stats.suspiciousAddresses,
-                addressSelector = { it.address },
-                onAddressClick = ::showSuspiciousAddressActions
-            ) { index, item ->
-                getString(
-                    R.string.suspicious_address_item,
-                    index + 1,
-                    item.address,
-                    numberFormat.format(item.suspiciousRequests),
-                    numberFormat.format(item.clientErrors),
-                    formatSuspicionReasons(item.reasons)
-                )
-            }
-        }
-
         val formattedSuspiciousEvents: CharSequence = if (stats.suspiciousEvents.isEmpty()) {
             getString(R.string.no_suspicious_events)
         } else {
@@ -341,7 +325,9 @@ class MainActivity : AppCompatActivity() {
                 numberFormat.format(stats.suspiciousAddressCount)
             )
         }
-        suspiciousAddressesText.text = formattedSuspiciousAddresses
+        displayedSuspiciousAddresses = stats.suspiciousAddresses
+        renderSuspiciousAddresses()
+        loadSuspiciousOrigins(stats.suspiciousAddresses)
         suspiciousEventsText.text = formattedSuspiciousEvents
         topAddressesText.text = formattedAddresses
         topUrlsText.text = formattedTopUrls
@@ -353,6 +339,77 @@ class MainActivity : AppCompatActivity() {
 
         emptyState.visibility = View.GONE
         resultContent.visibility = View.VISIBLE
+    }
+
+    private fun renderSuspiciousAddresses() {
+        if (displayedSuspiciousAddresses.isEmpty()) {
+            suspiciousAddressesText.text = getString(R.string.no_suspicious_addresses)
+            return
+        }
+
+        val numberFormat = NumberFormat.getIntegerInstance()
+        suspiciousAddressesText.text = buildLinkedItems(
+            displayedSuspiciousAddresses,
+            addressSelector = { it.address },
+            onAddressClick = ::showSuspiciousAddressActions
+        ) { index, item ->
+            getString(
+                R.string.suspicious_address_item,
+                index + 1,
+                item.address,
+                originCache[item.address] ?: getString(R.string.origin_loading),
+                numberFormat.format(item.suspiciousRequests),
+                numberFormat.format(item.clientErrors),
+                numberFormat.format(item.totalHits),
+                numberFormat.format(item.sourceFileCount),
+                formatSuspiciousPeriod(item.firstTimestamp, item.lastTimestamp),
+                formatSuspicionReasons(item.reasons)
+            )
+        }
+    }
+
+    private fun loadSuspiciousOrigins(addresses: List<SuspiciousAddress>) {
+        val generation = ++originLookupGeneration
+        val pendingAddresses = addresses.map { it.address }.filterNot(originCache::containsKey)
+        if (pendingAddresses.isEmpty()) return
+
+        lifecycleScope.launch {
+            pendingAddresses.forEach { address ->
+                val origin = if (!IpLookupService.isNumericAddress(address)) {
+                    getString(R.string.origin_not_available)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        runCatching { IpLookupService.lookupOrigin(address) }
+                            .fold(
+                                onSuccess = ::formatOrigin,
+                                onFailure = { getString(R.string.origin_not_available) }
+                            )
+                    }
+                }
+
+                originCache[address] = origin
+                if (generation == originLookupGeneration) renderSuspiciousAddresses()
+            }
+        }
+    }
+
+    private fun formatOrigin(origin: IpOrigin): String {
+        if (origin.isLocal) return getString(R.string.origin_local)
+        return listOfNotNull(origin.city, origin.region, origin.country)
+            .filter(String::isNotBlank)
+            .distinct()
+            .joinToString(" · ")
+            .ifBlank { origin.organization ?: getString(R.string.origin_not_available) }
+    }
+
+    private fun formatSuspiciousPeriod(firstTimestamp: Long?, lastTimestamp: Long?): String {
+        if (firstTimestamp == null && lastTimestamp == null) return getString(R.string.not_available)
+        if (firstTimestamp == lastTimestamp) return formatTimestamp(firstTimestamp)
+        return getString(
+            R.string.suspicious_period,
+            formatTimestamp(firstTimestamp),
+            formatTimestamp(lastTimestamp)
+        )
     }
 
     private fun setupExpandableSections() {

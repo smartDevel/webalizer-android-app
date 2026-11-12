@@ -29,4 +29,11 @@ class IpLookupServiceTest {
         assertTrue(IpLookupService.isPublicAddress("8.8.8.8"))
         assertTrue(IpLookupService.isPublicAddress("2001:4860:4860::8888"))
     }
+
+    @Test
+    fun identifiesLocalOriginWithoutNetworkLookup() {
+        val origin = IpLookupService.lookupOrigin("192.168.1.20")
+
+        assertTrue(origin.isLocal)
+    }
 }

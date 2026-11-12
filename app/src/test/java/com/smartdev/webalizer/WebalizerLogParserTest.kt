@@ -64,6 +64,46 @@ class WebalizerLogParserTest {
     }
 
     @Test
+    fun aggregatesSuspiciousAddressAcrossFilesWithObservedPeriod() {
+        val first = createLogFile(
+            listOf(
+                line(
+                    address = "203.0.113.50",
+                    target = "/.env",
+                    timestamp = "10/Nov/2026:08:00:00 +0100",
+                    status = 404
+                )
+            )
+        )
+        val second = createLogFile(
+            listOf(
+                line(
+                    address = "203.0.113.50",
+                    target = "/.git/config",
+                    timestamp = "12/Nov/2026:18:00:00 +0100",
+                    status = 404
+                )
+            )
+        )
+
+        try {
+            val address = WebalizerLogParser()
+                .parse(listOf(first, second))
+                .suspiciousAddresses
+                .single()
+
+            assertEquals(2, address.suspiciousRequests)
+            assertEquals(2, address.sourceFileCount)
+            assertTrue(address.firstTimestamp != null)
+            assertTrue(address.lastTimestamp != null)
+            assertTrue(address.firstTimestamp!! < address.lastTimestamp!!)
+        } finally {
+            first.delete()
+            second.delete()
+        }
+    }
+
+    @Test
     fun detectsProbeScannerAndRepeatedClientErrors() {
         val lines = mutableListOf(
             line(target = "/.env", userAgent = "sqlmap/1.8", status = 404)
