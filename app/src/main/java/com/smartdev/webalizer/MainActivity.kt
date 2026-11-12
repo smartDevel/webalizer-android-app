@@ -17,7 +17,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.DateFormat
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,6 +30,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var emptyState: TextView
     private lateinit var resultContent: LinearLayout
     private lateinit var fileNameText: TextView
+    private lateinit var fileMetaText: TextView
+    private lateinit var dailyHitsText: TextView
+    private lateinit var topAddressesText: TextView
     private lateinit var topUrlsText: TextView
 
     private var hasResult = false
@@ -49,6 +56,9 @@ class MainActivity : AppCompatActivity() {
         emptyState = findViewById(R.id.emptyState)
         resultContent = findViewById(R.id.resultContent)
         fileNameText = findViewById(R.id.fileNameText)
+        fileMetaText = findViewById(R.id.fileMetaText)
+        dailyHitsText = findViewById(R.id.dailyHitsText)
+        topAddressesText = findViewById(R.id.topAddressesText)
         topUrlsText = findViewById(R.id.topUrlsText)
 
         importButton.setOnClickListener {
@@ -116,6 +126,26 @@ class MainActivity : AppCompatActivity() {
     private fun showAnalysis(importedLog: ImportedLog) {
         val stats = importedLog.stats
         val numberFormat = NumberFormat.getIntegerInstance()
+        val decimalFormat = NumberFormat.getNumberInstance().apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = 1
+        }
+
+        val formattedDailyHits = if (stats.hitsByDay.isEmpty()) {
+            getString(R.string.no_time_data)
+        } else {
+            stats.hitsByDay.joinToString("\n") { (day, count) ->
+                getString(R.string.list_value_item, formatDay(day), numberFormat.format(count))
+            }
+        }
+
+        val formattedAddresses = if (stats.topAddresses.isEmpty()) {
+            getString(R.string.no_address_data)
+        } else {
+            stats.topAddresses.mapIndexed { index, (address, count) ->
+                getString(R.string.ranked_value_item, index + 1, address, numberFormat.format(count))
+            }.joinToString("\n\n")
+        }
 
         val formattedTopUrls = if (stats.topUrls.isEmpty()) {
             getString(R.string.no_page_views)
@@ -126,8 +156,26 @@ class MainActivity : AppCompatActivity() {
         }
 
         fileNameText.text = importedLog.name
-        bindStat(R.id.totalLinesRow, R.string.total_lines, numberFormat.format(stats.totalLines))
-        bindStat(R.id.parsedLinesRow, R.string.parsed_lines, numberFormat.format(stats.parsedLines))
+        fileMetaText.text = getString(
+            R.string.file_meta,
+            numberFormat.format(stats.parsedLines),
+            numberFormat.format(stats.totalLines)
+        )
+
+        bindStat(R.id.siteRow, R.string.site, stats.site ?: getString(R.string.site_not_available))
+        bindStat(
+            R.id.periodStartRow,
+            R.string.period_start,
+            formatTimestamp(stats.firstTimestamp)
+        )
+        bindStat(
+            R.id.periodEndRow,
+            R.string.period_end,
+            formatTimestamp(stats.lastTimestamp)
+        )
+        bindStat(R.id.activeDaysRow, R.string.active_days, numberFormat.format(stats.activeDays))
+
+        bindStat(R.id.visitsRow, R.string.visits, numberFormat.format(stats.totalVisits))
         bindStat(R.id.visitorsRow, R.string.visitors, numberFormat.format(stats.totalVisitors))
         bindStat(R.id.hitsRow, R.string.total_hits, numberFormat.format(stats.totalHits))
         bindStat(R.id.pagesRow, R.string.page_views, numberFormat.format(stats.totalPages))
@@ -136,6 +184,42 @@ class MainActivity : AppCompatActivity() {
             R.string.total_bandwidth,
             Formatter.formatFileSize(this, stats.totalBandwidth)
         )
+
+        bindStat(
+            R.id.averageDayRow,
+            R.string.average_hits_day,
+            if (stats.activeDays > 0) {
+                decimalFormat.format(stats.totalHits.toDouble() / stats.activeDays)
+            } else {
+                getString(R.string.not_available)
+            }
+        )
+        bindStat(
+            R.id.averageHourRow,
+            R.string.average_hits_hour,
+            if (stats.activeHours > 0) {
+                decimalFormat.format(stats.totalHits.toDouble() / stats.activeHours)
+            } else {
+                getString(R.string.not_available)
+            }
+        )
+        bindStat(
+            R.id.busiestDayRow,
+            R.string.busiest_day,
+            stats.busiestDay?.let { (day, count) ->
+                getString(R.string.peak_value, formatDay(day), numberFormat.format(count))
+            } ?: getString(R.string.not_available)
+        )
+        bindStat(
+            R.id.busiestHourRow,
+            R.string.busiest_hour,
+            stats.busiestHour?.let { (hour, count) ->
+                getString(R.string.peak_value, formatHour(hour), numberFormat.format(count))
+            } ?: getString(R.string.not_available)
+        )
+
+        dailyHitsText.text = formattedDailyHits
+        topAddressesText.text = formattedAddresses
         topUrlsText.text = formattedTopUrls
 
         emptyState.visibility = View.GONE
@@ -146,6 +230,25 @@ class MainActivity : AppCompatActivity() {
         val row = findViewById<View>(rowId)
         row.findViewById<TextView>(R.id.statLabel).setText(labelResource)
         row.findViewById<TextView>(R.id.statValue).text = value
+    }
+
+    private fun formatTimestamp(timestamp: Long?): String {
+        if (timestamp == null) return getString(R.string.not_available)
+        return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(timestamp))
+    }
+
+    private fun formatDay(day: String): String {
+        val date = runCatching {
+            SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).parse(day)
+        }.getOrNull() ?: return day
+        return DateFormat.getDateInstance(DateFormat.MEDIUM).format(date)
+    }
+
+    private fun formatHour(hour: String): String {
+        val date = runCatching {
+            SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT).parse(hour)
+        }.getOrNull() ?: return hour
+        return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(date)
     }
 
     private fun setImporting(isImporting: Boolean) {

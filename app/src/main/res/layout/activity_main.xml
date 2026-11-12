@@ -123,6 +123,48 @@
                         android:maxLines="2"
                         android:textColor="?attr/colorOnSurface"
                         android:textSize="17sp" />
+
+                    <TextView
+                        android:id="@+id/fileMetaText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/period_title"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="20sp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="18dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="18dp"
+                    android:paddingBottom="8dp">
+
+                    <include android:id="@+id/siteRow" layout="@layout/item_stat_row" />
+                    <include android:id="@+id/periodStartRow" layout="@layout/item_stat_row" />
+                    <include android:id="@+id/periodEndRow" layout="@layout/item_stat_row" />
+                    <include android:id="@+id/activeDaysRow" layout="@layout/item_stat_row" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -153,13 +195,110 @@
                     android:paddingEnd="18dp"
                     android:paddingBottom="8dp">
 
-                    <include android:id="@+id/totalLinesRow" layout="@layout/item_stat_row" />
-                    <include android:id="@+id/parsedLinesRow" layout="@layout/item_stat_row" />
+                    <include android:id="@+id/visitsRow" layout="@layout/item_stat_row" />
                     <include android:id="@+id/visitorsRow" layout="@layout/item_stat_row" />
                     <include android:id="@+id/hitsRow" layout="@layout/item_stat_row" />
                     <include android:id="@+id/pagesRow" layout="@layout/item_stat_row" />
                     <include android:id="@+id/bandwidthRow" layout="@layout/item_stat_row" />
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/visits_note"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/activity_title"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="20sp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="18dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="18dp"
+                    android:paddingBottom="8dp">
+
+                    <include android:id="@+id/averageDayRow" layout="@layout/item_stat_row" />
+                    <include android:id="@+id/averageHourRow" layout="@layout/item_stat_row" />
+                    <include android:id="@+id/busiestDayRow" layout="@layout/item_stat_row" />
+                    <include android:id="@+id/busiestHourRow" layout="@layout/item_stat_row" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/daily_hits_title"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="20sp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/dailyHitsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="4dp"
+                    android:padding="18dp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="15sp" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/top_addresses_title"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="20sp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/topAddressesText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="4dp"
+                    android:padding="18dp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="15sp" />
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
