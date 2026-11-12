@@ -17,23 +17,56 @@
 
     <Button
         android:id="@+id/btnImport"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Log-Datei importieren"
+        android:text="@string/import_local"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/title" />
+
+    <Button
+        android:id="@+id/btnDriveImport"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/import_google_drive"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnImport" />
+
+    <TextView
+        android:id="@+id/driveHelp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/drive_help"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnDriveImport" />
+
+    <ProgressBar
+        android:id="@+id/importProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:contentDescription="@string/loading_file"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/driveHelp" />
 
     <TextView
         android:id="@+id/resultText"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
-        android:text="Noch keine Auswertung geladen"
+        android:text="@string/no_analysis"
         android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnImport" />
+        app:layout_constraintTop_toBottomOf="@id/importProgress" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -8,14 +8,23 @@ Android Anwendung zur Auswertung von Webalizer‑Logdateien.
 - `src/main/java/` – Kotlin-Quellcode
 - `src/main/res/` – Ressourcen
 
-## Geplante Funktionen
+## Funktionen
 
-1. Log-Dateien importieren (lokal, Dateiauswahl)
+1. Log-Dateien vom Gerät oder aus Google Drive importieren
 2. Webalizer-Format parsen (Apache-Style Log)
 3. Statistiken anzeigen (Besucher, Seitenaufrufe, Bandbreite)
-4. Grafische Auswertung (Datenübertragung)
+
+Der Import nutzt den Android-Systemdialog (Storage Access Framework). Für Google
+Drive muss die Drive-App auf dem Gerät installiert und mit einem Google-Konto
+verbunden sein. Im Dateidialog wird Drive über das Seitenmenü ausgewählt. Die App
+benötigt dafür keine Speicherberechtigung und keine Google-Zugangsdaten.
+
+## Geplant
+
+- Grafische Auswertung
 
 ## Android-Setup
 
-Gradle mit:\n    ./gradlew build\n
-
+```bash
+./gradlew build
+```
