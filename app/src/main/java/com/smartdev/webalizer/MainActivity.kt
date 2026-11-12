@@ -3,8 +3,10 @@ package com.smartdev.webalizer
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.text.format.Formatter
 import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -15,15 +17,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.NumberFormat
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var resultText: TextView
-    private lateinit var localImportButton: Button
-    private lateinit var driveImportButton: Button
+    private lateinit var importButton: Button
     private lateinit var importProgress: ProgressBar
+    private lateinit var emptyState: TextView
+    private lateinit var resultContent: LinearLayout
+    private lateinit var fileNameText: TextView
+    private lateinit var topUrlsText: TextView
 
-    private var pendingImportSource = ImportSource.LOCAL
+    private var hasResult = false
 
     private val openLogFile = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -32,34 +37,30 @@ class MainActivity : AppCompatActivity() {
             return@registerForActivityResult
         }
 
-        importLog(uri, pendingImportSource)
+        importLog(uri)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        resultText = findViewById(R.id.resultText)
-        localImportButton = findViewById(R.id.btnImport)
-        driveImportButton = findViewById(R.id.btnDriveImport)
+        importButton = findViewById(R.id.btnImport)
         importProgress = findViewById(R.id.importProgress)
+        emptyState = findViewById(R.id.emptyState)
+        resultContent = findViewById(R.id.resultContent)
+        fileNameText = findViewById(R.id.fileNameText)
+        topUrlsText = findViewById(R.id.topUrlsText)
 
-        localImportButton.setOnClickListener {
-            openFilePicker(ImportSource.LOCAL)
-        }
-
-        driveImportButton.setOnClickListener {
-            Toast.makeText(this, R.string.drive_picker_hint, Toast.LENGTH_LONG).show()
-            openFilePicker(ImportSource.GOOGLE_DRIVE)
+        importButton.setOnClickListener {
+            openFilePicker()
         }
     }
 
-    private fun openFilePicker(source: ImportSource) {
-        pendingImportSource = source
-        openLogFile.launch(arrayOf("text/*", "application/octet-stream", "*/*"))
+    private fun openFilePicker() {
+        openLogFile.launch(arrayOf("*/*"))
     }
 
-    private fun importLog(uri: Uri, source: ImportSource) {
+    private fun importLog(uri: Uri) {
         setImporting(true)
 
         lifecycleScope.launch {
@@ -77,15 +78,20 @@ class MainActivity : AppCompatActivity() {
 
                     ImportedLog(
                         name = getDisplayName(uri),
-                        source = source,
                         stats = WebalizerLogParser().parse(logFile)
                     )
                 }
             }
 
             setImporting(false)
-            result.onSuccess(::showAnalysis)
+            result.onSuccess { importedLog ->
+                hasResult = true
+                showAnalysis(importedLog)
+            }
                 .onFailure { exception ->
+                    if (!hasResult) {
+                        emptyState.visibility = View.VISIBLE
+                    }
                     Toast.makeText(
                         this@MainActivity,
                         getString(R.string.file_open_error, exception.message ?: ""),
@@ -109,46 +115,49 @@ class MainActivity : AppCompatActivity() {
 
     private fun showAnalysis(importedLog: ImportedLog) {
         val stats = importedLog.stats
+        val numberFormat = NumberFormat.getIntegerInstance()
 
-        val topUrlsText = if (stats.topUrls.isEmpty()) {
+        val formattedTopUrls = if (stats.topUrls.isEmpty()) {
             getString(R.string.no_page_views)
         } else {
-            stats.topUrls.joinToString("\n") { "- ${it.first} (${it.second})" }
+            stats.topUrls.mapIndexed { index, (url, count) ->
+                getString(R.string.top_url_item, index + 1, url, numberFormat.format(count))
+            }.joinToString("\n\n")
         }
 
-        resultText.text = """
-                Quelle: ${getString(importedLog.source.labelResource)}
-                Datei: ${importedLog.name}
+        fileNameText.text = importedLog.name
+        bindStat(R.id.totalLinesRow, R.string.total_lines, numberFormat.format(stats.totalLines))
+        bindStat(R.id.parsedLinesRow, R.string.parsed_lines, numberFormat.format(stats.parsedLines))
+        bindStat(R.id.visitorsRow, R.string.visitors, numberFormat.format(stats.totalVisitors))
+        bindStat(R.id.hitsRow, R.string.total_hits, numberFormat.format(stats.totalHits))
+        bindStat(R.id.pagesRow, R.string.page_views, numberFormat.format(stats.totalPages))
+        bindStat(
+            R.id.bandwidthRow,
+            R.string.total_bandwidth,
+            Formatter.formatFileSize(this, stats.totalBandwidth)
+        )
+        topUrlsText.text = formattedTopUrls
 
-                Zeilen gesamt: ${stats.totalLines}
-                Zeilen geparst: ${stats.parsedLines}
-                Besucher (unique IP): ${stats.totalVisitors}
-                Hits gesamt: ${stats.totalHits}
-                Seitenaufrufe: ${stats.totalPages}
-                Bandbreite gesamt: ${stats.totalBandwidth} Bytes
+        emptyState.visibility = View.GONE
+        resultContent.visibility = View.VISIBLE
+    }
 
-                Top 5 URLs:
-                $topUrlsText
-            """.trimIndent()
+    private fun bindStat(rowId: Int, labelResource: Int, value: String) {
+        val row = findViewById<View>(rowId)
+        row.findViewById<TextView>(R.id.statLabel).setText(labelResource)
+        row.findViewById<TextView>(R.id.statValue).text = value
     }
 
     private fun setImporting(isImporting: Boolean) {
         importProgress.visibility = if (isImporting) View.VISIBLE else View.GONE
-        localImportButton.isEnabled = !isImporting
-        driveImportButton.isEnabled = !isImporting
-        if (isImporting) {
-            resultText.setText(R.string.loading_file)
+        importButton.isEnabled = !isImporting
+        if (isImporting && !hasResult) {
+            emptyState.visibility = View.GONE
         }
-    }
-
-    private enum class ImportSource(val labelResource: Int) {
-        LOCAL(R.string.source_local),
-        GOOGLE_DRIVE(R.string.source_google_drive)
     }
 
     private data class ImportedLog(
         val name: String,
-        val source: ImportSource,
         val stats: LogStats
     )
 }

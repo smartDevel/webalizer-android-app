@@ -1,16 +1,24 @@
 <resources>
     <string name="app_name">Webalizer</string>
     <string name="title_activity_main">Webalizer Log Analyzer</string>
-    <string name="import_local">Lokale Log-Datei auswählen</string>
-    <string name="import_google_drive">Log-Datei aus Google Drive</string>
-    <string name="drive_help">Google Drive muss auf dem Gerät installiert und mit einem Konto verbunden sein. Im Dateidialog kann Drive über das Seitenmenü gewählt werden.</string>
-    <string name="drive_picker_hint">Im Dateidialog links oben das Menü öffnen und Google Drive auswählen.</string>
+    <string name="eyebrow">Log-Analyse</string>
+    <string name="app_subtitle">Serverzugriffe kompakt und verständlich auswerten</string>
+    <string name="import_file">Logdatei auswählen</string>
+    <string name="import_hint">Vom Gerät oder aus einem Cloud-Speicher wie Google Drive</string>
     <string name="loading_file">Datei wird geladen und ausgewertet …</string>
-    <string name="no_analysis">Noch keine Auswertung geladen</string>
+    <string name="no_analysis">Wähle eine Logdatei aus, um die erste Auswertung zu sehen.</string>
     <string name="file_open_failed">Datei konnte nicht geöffnet werden</string>
     <string name="file_open_error">Fehler beim Öffnen: %1$s</string>
     <string name="unknown_file_name">Unbekannte Datei</string>
     <string name="no_page_views">Keine Seitenaufrufe erkannt</string>
-    <string name="source_local">Lokale Datei</string>
-    <string name="source_google_drive">Google Drive</string>
+    <string name="selected_file">Ausgewählte Datei</string>
+    <string name="summary_title">Übersicht</string>
+    <string name="top_urls_title">Beliebteste URLs</string>
+    <string name="total_lines">Zeilen gesamt</string>
+    <string name="parsed_lines">Zeilen ausgewertet</string>
+    <string name="visitors">Eindeutige Besucher</string>
+    <string name="total_hits">Hits gesamt</string>
+    <string name="page_views">Seitenaufrufe</string>
+    <string name="total_bandwidth">Übertragen</string>
+    <string name="top_url_item">%1$d. %2$s\n%3$s Aufrufe</string>
 </resources>

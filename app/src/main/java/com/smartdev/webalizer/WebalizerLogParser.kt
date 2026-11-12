@@ -3,7 +3,7 @@ package com.smartdev.webalizer
 import java.io.File
 
 private val LOG_PATTERN = Regex(
-    """^(\S+)\s+\S+\s+\S+\s+\[[^\]]+\]\s+\"(\S+)\s+([^\"]+)\s*[^\"]*\"\s+(\d{3})\s+(\S+).*"""
+    """^(\S+)\s+\S+\s+\S+\s+\[[^\]]+\]\s+\"(\S+)\s+(\S+)(?:\s+[^\"]*)?\"\s+(\d{3})\s+(\S+).*"""
 )
 
 private val ASSET_EXTENSIONS = setOf(
