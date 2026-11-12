@@ -88,6 +88,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            android:animateLayoutChanges="true"
             android:orientation="vertical"
             android:visibility="gone">
 
@@ -135,15 +136,22 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/securityHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:text="@string/security_title"
                 android:textColor="?attr/colorError"
                 android:textSize="20sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/securitySummaryCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -178,6 +186,7 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/suspiciousAddressesHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
@@ -187,6 +196,7 @@
                 android:textSize="16sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/suspiciousAddressesCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
@@ -206,6 +216,7 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/suspiciousEventsHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
@@ -215,6 +226,7 @@
                 android:textSize="16sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/suspiciousEventsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
@@ -235,15 +247,22 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/periodHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:text="@string/period_title"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/periodCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -269,15 +288,22 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/summaryHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:text="@string/summary_title"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/summaryCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -304,6 +330,7 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/visitsNote"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
@@ -312,15 +339,22 @@
                 android:textSize="12sp" />
 
             <TextView
+                android:id="@+id/activityHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:text="@string/activity_title"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/activityCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -346,15 +380,22 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/dailyHitsHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:text="@string/daily_hits_title"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dailyHitsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -374,15 +415,22 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/topAddressesHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:text="@string/top_addresses_title"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/topAddressesCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -402,15 +450,22 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/topUrlsHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
                 android:fontFamily="sans-serif-medium"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
                 android:text="@string/top_urls_title"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/topUrlsCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"

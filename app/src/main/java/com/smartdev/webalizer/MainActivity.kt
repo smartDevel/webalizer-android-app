@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private var hasResult = false
     private var currentLogFiles: List<File> = emptyList()
     private var currentImportDirectory: File? = null
+    private lateinit var expandableSections: List<ExpandableSection>
 
     private val openLogFiles = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -79,6 +80,8 @@ class MainActivity : AppCompatActivity() {
         suspiciousEventsText = findViewById(R.id.suspiciousEventsText)
         topAddressesText = findViewById(R.id.topAddressesText)
         topUrlsText = findViewById(R.id.topUrlsText)
+
+        setupExpandableSections()
 
         listOf(topAddressesText, suspiciousAddressesText, suspiciousEventsText).forEach { textView ->
             textView.movementMethod = LinkMovementMethod.getInstance()
@@ -343,8 +346,100 @@ class MainActivity : AppCompatActivity() {
         topAddressesText.text = formattedAddresses
         topUrlsText.text = formattedTopUrls
 
+        setSectionExpanded(
+            R.id.securityHeader,
+            stats.suspiciousAddressCount > 0
+        )
+
         emptyState.visibility = View.GONE
         resultContent.visibility = View.VISIBLE
+    }
+
+    private fun setupExpandableSections() {
+        expandableSections = listOf(
+            ExpandableSection(
+                headerId = R.id.securityHeader,
+                titleResource = R.string.security_title,
+                contentIds = intArrayOf(
+                    R.id.securitySummaryCard,
+                    R.id.suspiciousAddressesHeader,
+                    R.id.suspiciousAddressesCard,
+                    R.id.suspiciousEventsHeader,
+                    R.id.suspiciousEventsCard
+                ),
+                expanded = false
+            ),
+            ExpandableSection(
+                R.id.periodHeader,
+                R.string.period_title,
+                intArrayOf(R.id.periodCard),
+                false
+            ),
+            ExpandableSection(
+                R.id.summaryHeader,
+                R.string.summary_title,
+                intArrayOf(R.id.summaryCard, R.id.visitsNote),
+                true
+            ),
+            ExpandableSection(
+                R.id.activityHeader,
+                R.string.activity_title,
+                intArrayOf(R.id.activityCard),
+                false
+            ),
+            ExpandableSection(
+                R.id.dailyHitsHeader,
+                R.string.daily_hits_title,
+                intArrayOf(R.id.dailyHitsCard),
+                false
+            ),
+            ExpandableSection(
+                R.id.topAddressesHeader,
+                R.string.top_addresses_title,
+                intArrayOf(R.id.topAddressesCard),
+                false
+            ),
+            ExpandableSection(
+                R.id.topUrlsHeader,
+                R.string.top_urls_title,
+                intArrayOf(R.id.topUrlsCard),
+                false
+            )
+        )
+
+        expandableSections.forEach { section ->
+            findViewById<View>(section.headerId).setOnClickListener {
+                setSectionExpanded(section.headerId, !section.expanded)
+            }
+            renderSection(section)
+        }
+    }
+
+    private fun setSectionExpanded(headerId: Int, expanded: Boolean) {
+        val section = expandableSections.firstOrNull { it.headerId == headerId } ?: return
+        section.expanded = expanded
+        renderSection(section)
+    }
+
+    private fun renderSection(section: ExpandableSection) {
+        val header = findViewById<TextView>(section.headerId)
+        val title = getString(section.titleResource)
+        header.text = getString(
+            if (section.expanded) R.string.section_expanded else R.string.section_collapsed,
+            title
+        )
+        header.contentDescription = getString(
+            if (section.expanded) {
+                R.string.section_expanded_description
+            } else {
+                R.string.section_collapsed_description
+            },
+            title
+        )
+        header.isSelected = section.expanded
+        section.contentIds.forEach { viewId ->
+            findViewById<View>(viewId).visibility = if (section.expanded) View.VISIBLE else View.GONE
+        }
     }
 
     private fun <T> buildLinkedItems(
@@ -662,6 +757,13 @@ class MainActivity : AppCompatActivity() {
         val files: List<File>,
         val importDirectory: File,
         val stats: LogStats
+    )
+
+    private data class ExpandableSection(
+        val headerId: Int,
+        val titleResource: Int,
+        val contentIds: IntArray,
+        var expanded: Boolean
     )
 
     private companion object {

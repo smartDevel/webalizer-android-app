@@ -84,4 +84,8 @@
     <string name="ip_log_share_subject">Zugriffslog für %1$s</string>
     <string name="ip_log_ai_context">Analysiere die beigefügten vollständigen Webserver-Zugriffe der IP %1$s. Unterscheide Fehlalarme von Angriffsmustern und schlage konkrete, verhältnismäßige Gegenmaßnahmen vor.</string>
     <string name="ip_log_share_chooser">Zugriffslog teilen oder analysieren</string>
+    <string name="section_expanded">▼  %1$s</string>
+    <string name="section_collapsed">▶  %1$s</string>
+    <string name="section_expanded_description">%1$s ist geöffnet. Antippen zum Einklappen.</string>
+    <string name="section_collapsed_description">%1$s ist geschlossen. Antippen zum Ausklappen.</string>
 </resources>
