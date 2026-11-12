@@ -56,4 +56,14 @@
     <string name="ranked_value_item">%1$d. %2$s\n%3$s Hits</string>
     <string name="peak_value">%1$s · %2$s Hits</string>
     <string name="top_url_item">%1$d. %2$s\n%3$s Aufrufe</string>
+    <string name="ip_details_title">IP-Details: %1$s</string>
+    <string name="ip_lookup_loading">Regions-, Netzwerk- und RDAP-Daten werden geladen …</string>
+    <string name="ip_lookup_local">%1$s. Für diese Adresse erfolgt keine externe Abfrage.</string>
+    <string name="ip_lookup_error">IP-Details konnten nicht geladen werden: %1$s</string>
+    <string name="ip_location_section">REGION (ungefähre Zuordnung)</string>
+    <string name="ip_network_section">NETZWERK &amp; ASN</string>
+    <string name="ip_rdap_section">RDAP / WHOIS-NETZDATEN</string>
+    <string name="ip_lookup_partial">Teilweise Daten: %1$s ist derzeit nicht verfügbar.</string>
+    <string name="ip_lookup_privacy_note">Die Standortzuordnung ist nur eine Näherung. Die Abfrage wird erst durch Antippen gestartet und an ipwho.is sowie RDAP.org gesendet.</string>
+    <string name="close">Schließen</string>
 </resources>
