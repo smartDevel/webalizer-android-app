@@ -3,7 +3,6 @@ package com.smartdev.webalizer
 import java.io.File
 import java.net.URI
 import java.text.SimpleDateFormat
-import java.util.ArrayDeque
 import java.util.Locale
 
 private val LOG_PATTERN = Regex(
@@ -93,7 +92,9 @@ private data class AddressRisk(
 )
 
 class WebalizerLogParser {
-    fun parse(file: File): LogStats {
+    fun parse(file: File): LogStats = parse(listOf(file))
+
+    fun parse(files: Iterable<File>): LogStats {
         var totalLines = 0
         var parsedLines = 0
         var totalHits = 0
@@ -108,7 +109,7 @@ class WebalizerLogParser {
         val hourCounter = mutableMapOf<String, Int>()
         val timestampsByAddress = mutableMapOf<String, MutableList<Long>>()
         val riskByAddress = mutableMapOf<String, AddressRisk>()
-        val suspiciousEvents = ArrayDeque<SuspiciousEvent>()
+        val suspiciousEvents = mutableListOf<SuspiciousEvent>()
         val timestampParser = SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss Z", Locale.US).apply {
             isLenient = false
         }
@@ -118,76 +119,81 @@ class WebalizerLogParser {
         var lastTimestamp: Long? = null
         var suspiciousRequestCount = 0
 
-        file.bufferedReader().useLines { lines ->
-            lines.forEach { line ->
-                totalLines++
+        files.forEach { file ->
+            file.bufferedReader().useLines { lines ->
+                lines.forEach lineLoop@{ line ->
+                    totalLines++
 
-                val match = LOG_PATTERN.find(line) ?: return@forEach
-                parsedLines++
+                    val match = LOG_PATTERN.find(line) ?: return@lineLoop
+                    parsedLines++
 
-                val virtualHost = match.groupValues[1].takeIf { it.isNotBlank() && it != "-" }
-                val ip = match.groupValues[2]
-                val timestampRaw = match.groupValues[3]
-                val method = match.groupValues[4]
-                val url = match.groupValues[5]
-                val status = match.groupValues[6].toIntOrNull() ?: 0
-                val bytesRaw = match.groupValues[7]
-                val userAgent = match.groupValues[9]
+                    val virtualHost = match.groupValues[1].takeIf { it.isNotBlank() && it != "-" }
+                    val ip = match.groupValues[2]
+                    val timestampRaw = match.groupValues[3]
+                    val method = match.groupValues[4]
+                    val url = match.groupValues[5]
+                    val status = match.groupValues[6].toIntOrNull() ?: 0
+                    val bytesRaw = match.groupValues[7]
+                    val userAgent = match.groupValues[9]
 
-                uniqueVisitors += ip
-                addressCounter[ip] = (addressCounter[ip] ?: 0) + 1
-                totalHits++
+                    uniqueVisitors += ip
+                    addressCounter[ip] = (addressCounter[ip] ?: 0) + 1
+                    totalHits++
 
-                val addressRisk = riskByAddress.getOrPut(ip) { AddressRisk() }
-                addressRisk.totalHits++
-                if (status in 400..499) {
-                    addressRisk.clientErrors++
-                }
-
-                val site = virtualHost ?: extractHost(url)
-                if (site != null) {
-                    siteCounter[site] = (siteCounter[site] ?: 0) + 1
-                }
-
-                val timestamp = runCatching { timestampParser.parse(timestampRaw) }.getOrNull()
-                if (timestamp != null) {
-                    val timestampMillis = timestamp.time
-                    firstTimestamp = minOf(firstTimestamp ?: timestampMillis, timestampMillis)
-                    lastTimestamp = maxOf(lastTimestamp ?: timestampMillis, timestampMillis)
-                    timestampsByAddress.getOrPut(ip) { mutableListOf() } += timestampMillis
-
-                    val day = dayFormatter.format(timestamp)
-                    val hour = hourFormatter.format(timestamp)
-                    dayCounter[day] = (dayCounter[day] ?: 0) + 1
-                    hourCounter[hour] = (hourCounter[hour] ?: 0) + 1
-                }
-
-                val suspicionReasons = detectSuspicion(method, url, userAgent)
-                if (suspicionReasons.isNotEmpty()) {
-                    suspiciousRequestCount++
-                    addressRisk.suspiciousRequests++
-                    addressRisk.reasons += suspicionReasons
-                    if (suspiciousEvents.size == MAX_SUSPICIOUS_EVENTS) {
-                        suspiciousEvents.removeFirst()
+                    val addressRisk = riskByAddress.getOrPut(ip) { AddressRisk() }
+                    addressRisk.totalHits++
+                    if (status in 400..499) {
+                        addressRisk.clientErrors++
                     }
-                    suspiciousEvents.addLast(
-                        SuspiciousEvent(
-                            timestamp = timestamp?.time,
-                            address = ip,
-                            method = method,
-                            target = url,
-                            status = status,
-                            reasons = suspicionReasons
-                        )
-                    )
-                }
 
-                val bytes = bytesRaw.toLongOrNull() ?: 0L
-                totalBandwidth += bytes
+                    val site = virtualHost ?: extractHost(url)
+                    if (site != null) {
+                        siteCounter[site] = (siteCounter[site] ?: 0) + 1
+                    }
 
-                if (isPageRequest(method, url, status)) {
-                    totalPages++
-                    urlCounter[url] = (urlCounter[url] ?: 0) + 1
+                    val timestamp = runCatching { timestampParser.parse(timestampRaw) }.getOrNull()
+                    if (timestamp != null) {
+                        val timestampMillis = timestamp.time
+                        firstTimestamp = minOf(firstTimestamp ?: timestampMillis, timestampMillis)
+                        lastTimestamp = maxOf(lastTimestamp ?: timestampMillis, timestampMillis)
+                        timestampsByAddress.getOrPut(ip) { mutableListOf() } += timestampMillis
+
+                        val day = dayFormatter.format(timestamp)
+                        val hour = hourFormatter.format(timestamp)
+                        dayCounter[day] = (dayCounter[day] ?: 0) + 1
+                        hourCounter[hour] = (hourCounter[hour] ?: 0) + 1
+                    }
+
+                    val suspicionReasons = detectSuspicion(method, url, userAgent)
+                    if (suspicionReasons.isNotEmpty()) {
+                        suspiciousRequestCount++
+                        addressRisk.suspiciousRequests++
+                        addressRisk.reasons += suspicionReasons
+                        suspiciousEvents +=
+                            SuspiciousEvent(
+                                timestamp = timestamp?.time,
+                                address = ip,
+                                method = method,
+                                target = url,
+                                status = status,
+                                reasons = suspicionReasons
+                            )
+                        if (suspiciousEvents.size > MAX_SUSPICIOUS_EVENTS) {
+                            suspiciousEvents.removeAt(
+                                suspiciousEvents.indices.minByOrNull { index ->
+                                    suspiciousEvents[index].timestamp ?: Long.MIN_VALUE
+                                } ?: 0
+                            )
+                        }
+                    }
+
+                    val bytes = bytesRaw.toLongOrNull() ?: 0L
+                    totalBandwidth += bytes
+
+                    if (isPageRequest(method, url, status)) {
+                        totalPages++
+                        urlCounter[url] = (urlCounter[url] ?: 0) + 1
+                    }
                 }
             }
         }
@@ -258,7 +264,7 @@ class WebalizerLogParser {
             suspiciousRequestCount = suspiciousRequestCount,
             suspiciousAddressCount = allSuspiciousAddresses.size,
             suspiciousAddresses = suspiciousAddresses,
-            suspiciousEvents = suspiciousEvents.toList().asReversed(),
+            suspiciousEvents = suspiciousEvents.sortedByDescending { it.timestamp ?: Long.MIN_VALUE },
             topUrls = topUrls
         )
     }

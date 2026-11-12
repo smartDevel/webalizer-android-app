@@ -49,14 +49,10 @@ class MainActivity : AppCompatActivity() {
 
     private var hasResult = false
 
-    private val openLogFile = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri == null) {
-            return@registerForActivityResult
-        }
-
-        importLog(uri)
+    private val openLogFiles = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) importLogs(uris)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,28 +83,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openFilePicker() {
-        openLogFile.launch(arrayOf("*/*"))
+        openLogFiles.launch(arrayOf("*/*"))
     }
 
-    private fun importLog(uri: Uri) {
+    private fun importLogs(uris: List<Uri>) {
         setImporting(true)
 
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
-                    val logFile = File(cacheDir, "webalizer.log")
-                    val inputStream = contentResolver.openInputStream(uri)
-                        ?: throw IllegalStateException(getString(R.string.file_open_failed))
-
-                    inputStream.use { input ->
-                        logFile.outputStream().use { output ->
-                            input.copyTo(output)
+                    val sources = uris.map { uri ->
+                        ImportSource(getDisplayName(uri)) {
+                            contentResolver.openInputStream(uri)
+                                ?: throw IllegalStateException(getString(R.string.file_open_failed))
                         }
                     }
+                    val prepared = LogImportProcessor.prepare(
+                        sources,
+                        File(cacheDir, "log-import")
+                    )
 
                     ImportedLog(
-                        name = getDisplayName(uri),
-                        stats = WebalizerLogParser().parse(logFile)
+                        name = formatSourceNames(prepared.sourceNames),
+                        sourceCount = prepared.sourceNames.size,
+                        logFileCount = prepared.files.size,
+                        archiveCount = prepared.archiveCount,
+                        stats = WebalizerLogParser().parse(prepared.files)
                     )
                 }
             }
@@ -128,6 +128,17 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                 }
+        }
+    }
+
+    private fun formatSourceNames(names: List<String>): String {
+        return when {
+            names.size <= 3 -> names.joinToString("\n")
+            else -> getString(
+                R.string.source_names_more,
+                names.take(2).joinToString("\n"),
+                names.size - 2
+            )
         }
     }
 
@@ -217,11 +228,25 @@ class MainActivity : AppCompatActivity() {
         }
 
         fileNameText.text = importedLog.name
-        fileMetaText.text = getString(
-            R.string.file_meta,
-            numberFormat.format(stats.parsedLines),
-            numberFormat.format(stats.totalLines)
-        )
+        fileMetaText.text = if (
+            importedLog.sourceCount == 1 &&
+            importedLog.logFileCount == 1 &&
+            importedLog.archiveCount == 0
+        ) {
+            getString(
+                R.string.file_meta,
+                numberFormat.format(stats.parsedLines),
+                numberFormat.format(stats.totalLines)
+            )
+        } else {
+            getString(
+                R.string.file_meta_multiple,
+                numberFormat.format(importedLog.logFileCount),
+                numberFormat.format(importedLog.archiveCount),
+                numberFormat.format(stats.parsedLines),
+                numberFormat.format(stats.totalLines)
+            )
+        }
 
         bindStat(R.id.siteRow, R.string.site, stats.site ?: getString(R.string.site_not_available))
         bindStat(
@@ -486,6 +511,9 @@ class MainActivity : AppCompatActivity() {
 
     private data class ImportedLog(
         val name: String,
+        val sourceCount: Int,
+        val logFileCount: Int,
+        val archiveCount: Int,
         val stats: LogStats
     )
 }

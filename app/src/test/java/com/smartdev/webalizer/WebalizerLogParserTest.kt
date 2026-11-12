@@ -36,6 +36,34 @@ class WebalizerLogParserTest {
     }
 
     @Test
+    fun aggregatesFilesAndKeepsVisitsAcrossFileBoundaries() {
+        val first = createLogFile(
+            listOf(line(timestamp = "11/Nov/2026:10:00:00 +0100"))
+        )
+        val second = createLogFile(
+            listOf(
+                line(timestamp = "11/Nov/2026:10:20:00 +0100"),
+                line(
+                    address = "192.0.2.20",
+                    timestamp = "12/Nov/2026:08:00:00 +0100"
+                )
+            )
+        )
+
+        try {
+            val stats = WebalizerLogParser().parse(listOf(first, second))
+
+            assertEquals(3, stats.totalHits)
+            assertEquals(2, stats.totalVisitors)
+            assertEquals(2, stats.totalVisits)
+            assertEquals(2, stats.activeDays)
+        } finally {
+            first.delete()
+            second.delete()
+        }
+    }
+
+    @Test
     fun detectsProbeScannerAndRepeatedClientErrors() {
         val lines = mutableListOf(
             line(target = "/.env", userAgent = "sqlmap/1.8", status = 404)
@@ -62,12 +90,17 @@ class WebalizerLogParserTest {
     }
 
     private fun parse(lines: List<String>): LogStats {
-        val file = File.createTempFile("webalizer-test", ".log")
+        val file = createLogFile(lines)
         return try {
-            file.writeText(lines.joinToString("\n"))
             WebalizerLogParser().parse(file)
         } finally {
             file.delete()
+        }
+    }
+
+    private fun createLogFile(lines: List<String>): File {
+        return File.createTempFile("webalizer-test", ".log").apply {
+            writeText(lines.joinToString("\n"))
         }
     }
 
