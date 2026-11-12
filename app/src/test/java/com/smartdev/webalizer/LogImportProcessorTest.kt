@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.util.zip.ZipEntry
+import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipOutputStream
 
 class LogImportProcessorTest {
@@ -59,6 +60,28 @@ class LogImportProcessorTest {
         }
     }
 
+    @Test
+    fun decompressesGzipLogAndMakesItParsable() {
+        val output = Files.createTempDirectory("webalizer-gzip").toFile()
+        val logLine = "192.0.2.10 - - [11/Nov/2026:10:00:00 +0100] " +
+            "\"GET /index.html HTTP/1.1\" 200 512 \"-\" \"Mozilla/5.0\""
+        try {
+            val prepared = LogImportProcessor.prepare(
+                listOf(ImportSource("access.log.gz") {
+                    ByteArrayInputStream(gzip(logLine))
+                }),
+                output
+            )
+
+            assertEquals(1, prepared.files.size)
+            assertEquals(1, prepared.archiveCount)
+            assertEquals(logLine, prepared.files.single().readText())
+            assertEquals(1, WebalizerLogParser().parse(prepared.files).parsedLines)
+        } finally {
+            output.deleteRecursively()
+        }
+    }
+
     private fun source(name: String, content: String): ImportSource {
         return ImportSource(name) { ByteArrayInputStream(content.toByteArray()) }
     }
@@ -71,6 +94,14 @@ class LogImportProcessorTest {
                 zip.write(content.toByteArray())
                 zip.closeEntry()
             }
+        }
+        return bytes.toByteArray()
+    }
+
+    private fun gzip(content: String): ByteArray {
+        val bytes = ByteArrayOutputStream()
+        GZIPOutputStream(bytes).use { gzip ->
+            gzip.write(content.toByteArray())
         }
         return bytes.toByteArray()
     }

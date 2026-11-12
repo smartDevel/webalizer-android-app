@@ -4,6 +4,7 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.zip.GZIPInputStream
 import java.util.zip.ZipInputStream
 
 data class ImportSource(
@@ -52,6 +53,15 @@ object LogImportProcessor {
                         files = files,
                         initialTotalBytes = totalBytes
                     )
+                } else if (isGzip(buffered)) {
+                    archiveCount++
+                    val output = File(outputDirectory, "gzip-$sourceIndex.log")
+                    GZIPInputStream(buffered).use { gzip ->
+                        FileOutputStream(output).use { target ->
+                            totalBytes = copyLimited(gzip, target, totalBytes)
+                        }
+                    }
+                    files += output
                 } else {
                     val output = File(outputDirectory, "source-$sourceIndex.log")
                     FileOutputStream(output).use { target ->
@@ -81,6 +91,14 @@ object LogImportProcessor {
             ((signature[2] == 0x03.toByte() && signature[3] == 0x04.toByte()) ||
                 (signature[2] == 0x05.toByte() && signature[3] == 0x06.toByte()) ||
                 (signature[2] == 0x07.toByte() && signature[3] == 0x08.toByte()))
+    }
+
+    private fun isGzip(input: BufferedInputStream): Boolean {
+        input.mark(2)
+        val first = input.read()
+        val second = input.read()
+        input.reset()
+        return first == 0x1f && second == 0x8b
     }
 
     private fun extractZip(
