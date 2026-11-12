@@ -3,6 +3,7 @@ package com.smartdev.webalizer
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -432,8 +433,8 @@ class MainActivity : AppCompatActivity() {
             if (importProgress.visibility != View.VISIBLE) importButton.isEnabled = true
         }
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled = false
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = false
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL).isEnabled = false
+            dialog.getButton(DialogInterface.BUTTON_NEGATIVE).isEnabled = false
         }
         dialog.show()
 
@@ -462,11 +463,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                val copyButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+                val copyButton = dialog.getButton(DialogInterface.BUTTON_NEUTRAL)
                 copyButton.isEnabled = export.totalLines > 0
                 copyButton.setOnClickListener { copyAccessLog(export) }
 
-                val shareButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                val shareButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
                 shareButton.isEnabled = export.totalLines > 0
                 shareButton.setOnClickListener { shareAccessLog(address, export.file) }
             }.onFailure { exception ->
@@ -494,7 +495,7 @@ class MainActivity : AppCompatActivity() {
     private fun shareAccessLog(address: String, file: File) {
         val uri = FileProvider.getUriForFile(
             this,
-            "${BuildConfig.APPLICATION_ID}.fileprovider",
+            "$packageName.fileprovider",
             file
         )
         val intent = Intent(Intent.ACTION_SEND).apply {
