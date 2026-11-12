@@ -32,6 +32,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fileNameText: TextView
     private lateinit var fileMetaText: TextView
     private lateinit var dailyHitsText: TextView
+    private lateinit var securitySummaryText: TextView
+    private lateinit var suspiciousAddressesText: TextView
+    private lateinit var suspiciousEventsText: TextView
     private lateinit var topAddressesText: TextView
     private lateinit var topUrlsText: TextView
 
@@ -58,6 +61,9 @@ class MainActivity : AppCompatActivity() {
         fileNameText = findViewById(R.id.fileNameText)
         fileMetaText = findViewById(R.id.fileMetaText)
         dailyHitsText = findViewById(R.id.dailyHitsText)
+        securitySummaryText = findViewById(R.id.securitySummaryText)
+        suspiciousAddressesText = findViewById(R.id.suspiciousAddressesText)
+        suspiciousEventsText = findViewById(R.id.suspiciousEventsText)
         topAddressesText = findViewById(R.id.topAddressesText)
         topUrlsText = findViewById(R.id.topUrlsText)
 
@@ -147,6 +153,38 @@ class MainActivity : AppCompatActivity() {
             }.joinToString("\n\n")
         }
 
+        val formattedSuspiciousAddresses = if (stats.suspiciousAddresses.isEmpty()) {
+            getString(R.string.no_suspicious_addresses)
+        } else {
+            stats.suspiciousAddresses.mapIndexed { index, item ->
+                getString(
+                    R.string.suspicious_address_item,
+                    index + 1,
+                    item.address,
+                    numberFormat.format(item.suspiciousRequests),
+                    numberFormat.format(item.clientErrors),
+                    formatSuspicionReasons(item.reasons)
+                )
+            }.joinToString("\n\n")
+        }
+
+        val formattedSuspiciousEvents = if (stats.suspiciousEvents.isEmpty()) {
+            getString(R.string.no_suspicious_events)
+        } else {
+            stats.suspiciousEvents.take(25).mapIndexed { index, event ->
+                getString(
+                    R.string.suspicious_event_item,
+                    index + 1,
+                    formatTimestamp(event.timestamp),
+                    event.address,
+                    event.method,
+                    event.target,
+                    event.status,
+                    formatSuspicionReasons(event.reasons)
+                )
+            }.joinToString("\n\n")
+        }
+
         val formattedTopUrls = if (stats.topUrls.isEmpty()) {
             getString(R.string.no_page_views)
         } else {
@@ -219,6 +257,17 @@ class MainActivity : AppCompatActivity() {
         )
 
         dailyHitsText.text = formattedDailyHits
+        securitySummaryText.text = if (stats.suspiciousAddressCount == 0) {
+            getString(R.string.security_summary_clear)
+        } else {
+            getString(
+                R.string.security_summary_flagged,
+                numberFormat.format(stats.suspiciousRequestCount),
+                numberFormat.format(stats.suspiciousAddressCount)
+            )
+        }
+        suspiciousAddressesText.text = formattedSuspiciousAddresses
+        suspiciousEventsText.text = formattedSuspiciousEvents
         topAddressesText.text = formattedAddresses
         topUrlsText.text = formattedTopUrls
 
@@ -249,6 +298,20 @@ class MainActivity : AppCompatActivity() {
             SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT).parse(hour)
         }.getOrNull() ?: return hour
         return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(date)
+    }
+
+    private fun formatSuspicionReasons(reasons: Set<SuspicionReason>): String {
+        return reasons.joinToString(", ") { reason ->
+            getString(
+                when (reason) {
+                    SuspicionReason.SENSITIVE_PATH -> R.string.reason_sensitive_path
+                    SuspicionReason.ATTACK_PAYLOAD -> R.string.reason_attack_payload
+                    SuspicionReason.SCANNER_USER_AGENT -> R.string.reason_scanner_user_agent
+                    SuspicionReason.UNUSUAL_METHOD -> R.string.reason_unusual_method
+                    SuspicionReason.ERROR_BURST -> R.string.reason_error_burst
+                }
+            )
+        }
     }
 
     private fun setImporting(isImporting: Boolean) {

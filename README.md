@@ -13,6 +13,12 @@ Android Anwendung zur Auswertung von Webalizer‑Logdateien.
 1. Log-Dateien vom Gerät oder aus Google Drive importieren
 2. Webalizer-Format parsen (Apache-Style Log)
 3. Statistiken anzeigen (Besucher, Seitenaufrufe, Bandbreite)
+4. Auffällige Requests und Adressen regelbasiert hervorheben
+
+Die Sicherheitsauswertung markiert unter anderem sensible Scan-Ziele,
+Traversal-/Injection-Muster, bekannte Scanner-User-Agents, ungewöhnliche
+HTTP-Methoden und Adressen mit vielen 4xx-Antworten. Die Hinweise sind
+heuristisch und stellen keinen automatischen Nachweis eines Angriffs dar.
 
 Der Import nutzt den Android-Systemdialog (Storage Access Framework). Für Google
 Drive muss die Drive-App auf dem Gerät installiert und mit einem Google-Konto
