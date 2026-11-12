@@ -16,6 +16,7 @@ Android Anwendung zur Auswertung von Webalizer‑Logdateien.
 4. Statistiken anzeigen (Besucher, Seitenaufrufe, Bandbreite)
 5. Auffällige Requests und Adressen regelbasiert hervorheben
 6. IP-Adressen antippen und Regions-, ASN- sowie RDAP/WHOIS-Netzdaten anzeigen
+7. Vollständige Rohlog-Zeilen auffälliger IPs anzeigen, kopieren oder zur KI-Analyse teilen
 
 Die Sicherheitsauswertung markiert unter anderem sensible Scan-Ziele,
 Traversal-/Injection-Muster, bekannte Scanner-User-Agents, ungewöhnliche

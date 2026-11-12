@@ -68,4 +68,20 @@
     <string name="ip_lookup_partial">Teilweise Daten: %1$s ist derzeit nicht verfügbar.</string>
     <string name="ip_lookup_privacy_note">Die Standortzuordnung ist nur eine Näherung. Die Abfrage wird erst durch Antippen gestartet und an ipwho.is sowie RDAP.org gesendet.</string>
     <string name="close">Schließen</string>
+    <string name="ip_action_access_log">Vollständiges Zugriffslog anzeigen</string>
+    <string name="ip_action_details">Region, ASN und WHOIS/RDAP anzeigen</string>
+    <string name="ip_log_title">Zugriffe von %1$s</string>
+    <string name="ip_log_loading">Alle importierten Logdateien werden nach dieser IP durchsucht …</string>
+    <string name="ip_log_count">%1$d vollständige Rohlog-Zeilen gefunden</string>
+    <string name="ip_log_empty">Keine passenden Rohlog-Zeilen gefunden.</string>
+    <string name="ip_log_preview_truncated">Die Vorschau ist gekürzt. Über „Teilen“ wird die vollständige Logdatei übertragen.</string>
+    <string name="ip_log_error">Zugriffslog konnte nicht erstellt werden: %1$s</string>
+    <string name="ip_log_sources_unavailable">Die ursprünglichen Logquellen sind nicht mehr verfügbar. Bitte importiere sie erneut.</string>
+    <string name="copy">Kopieren</string>
+    <string name="share">Teilen</string>
+    <string name="ip_log_copy_too_large">Das vollständige Log ist zu groß für die Zwischenablage. Bitte verwende „Teilen“.</string>
+    <string name="ip_log_copied">Vollständiges Zugriffslog kopiert</string>
+    <string name="ip_log_share_subject">Zugriffslog für %1$s</string>
+    <string name="ip_log_ai_context">Analysiere die beigefügten vollständigen Webserver-Zugriffe der IP %1$s. Unterscheide Fehlalarme von Angriffsmustern und schlage konkrete, verhältnismäßige Gegenmaßnahmen vor.</string>
+    <string name="ip_log_share_chooser">Zugriffslog teilen oder analysieren</string>
 </resources>

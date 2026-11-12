@@ -9,6 +9,10 @@ private val LOG_PATTERN = Regex(
     """^(?:(\S+)\s+)?(\S+)\s+\S+\s+\S+\s+\[([^\]]+)\]\s+\"(\S+)\s+(\S+)(?:\s+[^\"]*)?\"\s+(\d{3})\s+(\S+)(?:\s+\"([^\"]*)\"\s+\"([^\"]*)\")?.*"""
 )
 
+internal fun extractLogAddress(line: String): String? {
+    return LOG_PATTERN.find(line)?.groupValues?.get(2)
+}
+
 private const val VISIT_TIMEOUT_MILLIS = 30 * 60 * 1000L
 private const val MAX_SUSPICIOUS_EVENTS = 50
 private const val ERROR_BURST_MINIMUM = 20

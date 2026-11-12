@@ -1,5 +1,9 @@
 package com.smartdev.webalizer
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -21,6 +25,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.core.content.FileProvider
 import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var topUrlsText: TextView
 
     private var hasResult = false
+    private var currentLogFiles: List<File> = emptyList()
+    private var currentImportDirectory: File? = null
 
     private val openLogFiles = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -92,6 +99,10 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
+                    val importDirectory = File(
+                        cacheDir,
+                        "log-import-${System.nanoTime()}"
+                    )
                     val sources = uris.map { uri ->
                         ImportSource(getDisplayName(uri)) {
                             contentResolver.openInputStream(uri)
@@ -100,7 +111,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     val prepared = LogImportProcessor.prepare(
                         sources,
-                        File(cacheDir, "log-import")
+                        importDirectory
                     )
 
                     ImportedLog(
@@ -108,6 +119,8 @@ class MainActivity : AppCompatActivity() {
                         sourceCount = prepared.sourceNames.size,
                         logFileCount = prepared.files.size,
                         archiveCount = prepared.archiveCount,
+                        files = prepared.files,
+                        importDirectory = importDirectory,
                         stats = WebalizerLogParser().parse(prepared.files)
                     )
                 }
@@ -115,6 +128,14 @@ class MainActivity : AppCompatActivity() {
 
             setImporting(false)
             result.onSuccess { importedLog ->
+                val previousDirectory = currentImportDirectory
+                currentImportDirectory = importedLog.importDirectory
+                currentLogFiles = importedLog.files
+                if (previousDirectory != null && previousDirectory != importedLog.importDirectory) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        previousDirectory.deleteRecursively()
+                    }
+                }
                 hasResult = true
                 showAnalysis(importedLog)
             }
@@ -186,7 +207,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             buildLinkedItems(
                 stats.suspiciousAddresses,
-                addressSelector = { it.address }
+                addressSelector = { it.address },
+                onAddressClick = ::showSuspiciousAddressActions
             ) { index, item ->
                 getString(
                     R.string.suspicious_address_item,
@@ -204,7 +226,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             buildLinkedItems(
                 stats.suspiciousEvents.take(25),
-                addressSelector = { it.address }
+                addressSelector = { it.address },
+                onAddressClick = ::showSuspiciousAddressActions
             ) { index, event ->
                 getString(
                     R.string.suspicious_event_item,
@@ -326,6 +349,7 @@ class MainActivity : AppCompatActivity() {
     private fun <T> buildLinkedItems(
         items: List<T>,
         addressSelector: (T) -> String,
+        onAddressClick: (String) -> Unit = ::showIpDetails,
         formatter: (Int, T) -> String
     ): CharSequence {
         val builder = SpannableStringBuilder()
@@ -342,7 +366,7 @@ class MainActivity : AppCompatActivity() {
                 builder.setSpan(
                     object : ClickableSpan() {
                         override fun onClick(widget: View) {
-                            showIpDetails(address)
+                            onAddressClick(address)
                         }
 
                         override fun updateDrawState(drawState: TextPaint) {
@@ -362,6 +386,126 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return builder
+    }
+
+    private fun showSuspiciousAddressActions(address: String) {
+        AlertDialog.Builder(this)
+            .setTitle(address)
+            .setItems(
+                arrayOf(
+                    getString(R.string.ip_action_access_log),
+                    getString(R.string.ip_action_details)
+                )
+            ) { _, which ->
+                when (which) {
+                    0 -> showIpAccessLog(address)
+                    1 -> showIpDetails(address)
+                }
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    private fun showIpAccessLog(address: String) {
+        if (currentLogFiles.isEmpty()) {
+            Toast.makeText(this, R.string.ip_log_sources_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val content = TextView(this).apply {
+            setPadding(dp(24), dp(8), dp(24), dp(16))
+            setTextIsSelectable(true)
+            text = getString(R.string.ip_log_loading)
+            typeface = android.graphics.Typeface.MONOSPACE
+            textSize = 12f
+        }
+        val scrollView = ScrollView(this).apply { addView(content) }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.ip_log_title, address))
+            .setView(scrollView)
+            .setNeutralButton(R.string.copy, null)
+            .setNegativeButton(R.string.share, null)
+            .setPositiveButton(R.string.close, null)
+            .create()
+        importButton.isEnabled = false
+        dialog.setOnDismissListener {
+            if (importProgress.visibility != View.VISIBLE) importButton.isEnabled = true
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled = false
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled = false
+        }
+        dialog.show()
+
+        lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    IpAccessLogExporter.export(
+                        currentLogFiles,
+                        address,
+                        File(cacheDir, "ip-logs")
+                    )
+                }
+            }
+            if (!dialog.isShowing) return@launch
+
+            result.onSuccess { export ->
+                content.text = buildString {
+                    append(getString(R.string.ip_log_count, export.totalLines)).append("\n\n")
+                    if (export.preview.isBlank()) {
+                        append(getString(R.string.ip_log_empty))
+                    } else {
+                        append(export.preview)
+                    }
+                    if (export.previewTruncated) {
+                        append("\n\n").append(getString(R.string.ip_log_preview_truncated))
+                    }
+                }
+
+                val copyButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+                copyButton.isEnabled = export.totalLines > 0
+                copyButton.setOnClickListener { copyAccessLog(export) }
+
+                val shareButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                shareButton.isEnabled = export.totalLines > 0
+                shareButton.setOnClickListener { shareAccessLog(address, export.file) }
+            }.onFailure { exception ->
+                content.text = getString(
+                    R.string.ip_log_error,
+                    exception.message ?: getString(R.string.not_available)
+                )
+            }
+        }
+    }
+
+    private fun copyAccessLog(export: IpAccessLogExport) {
+        if (export.file.length() > MAX_CLIPBOARD_LOG_BYTES) {
+            Toast.makeText(this, R.string.ip_log_copy_too_large, Toast.LENGTH_LONG).show()
+            return
+        }
+        lifecycleScope.launch {
+            val text = withContext(Dispatchers.IO) { export.file.readText() }
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText(export.file.name, text))
+            Toast.makeText(this@MainActivity, R.string.ip_log_copied, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun shareAccessLog(address: String, file: File) {
+        val uri = FileProvider.getUriForFile(
+            this,
+            "${BuildConfig.APPLICATION_ID}.fileprovider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.ip_log_share_subject, address))
+            putExtra(Intent.EXTRA_TEXT, getString(R.string.ip_log_ai_context, address))
+            clipData = ClipData.newRawUri(file.name, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.ip_log_share_chooser)))
     }
 
     private fun showIpDetails(address: String) {
@@ -514,6 +658,12 @@ class MainActivity : AppCompatActivity() {
         val sourceCount: Int,
         val logFileCount: Int,
         val archiveCount: Int,
+        val files: List<File>,
+        val importDirectory: File,
         val stats: LogStats
     )
+
+    private companion object {
+        const val MAX_CLIPBOARD_LOG_BYTES = 1L * 1024 * 1024
+    }
 }
