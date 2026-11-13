@@ -6,9 +6,9 @@
 
     <application
         android:allowBackup="true"
-        android:label="Webalizer"
+        android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Webalizer"
+        android:theme="@style/Theme.AccessLogInsight"
         tools:targetApi="31">
         <activity
             android:name=".MainActivity"

@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">Webalizer</string>
-    <string name="title_activity_main">Webalizer Log Analyzer</string>
-    <string name="eyebrow">Log-Analyse</string>
+    <string name="app_name">AccessLog Insight</string>
+    <string name="title_activity_main">AccessLog Insight</string>
+    <string name="eyebrow">Webserver-Loganalyse</string>
     <string name="app_subtitle">Serverzugriffe kompakt und verständlich auswerten</string>
     <string name="import_file">Logdateien auswählen</string>
     <string name="import_hint">Einzeln, mehrfach, ZIP oder GZIP · Gerät, Downloads oder Google Drive</string>

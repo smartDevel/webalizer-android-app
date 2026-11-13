@@ -1,6 +1,7 @@
-# Webalizer Android App
+# AccessLog Insight
 
-Android Anwendung zur Auswertung von Webalizer‑Logdateien.
+Android-App zur lokalen Auswertung und Sicherheitsanalyse von
+Webserver-Zugriffslogs.
 
 ## Projektstruktur
 
@@ -12,7 +13,7 @@ Android Anwendung zur Auswertung von Webalizer‑Logdateien.
 
 1. Eine oder mehrere Log-Dateien vom Gerät oder aus Google Drive importieren
 2. ZIP-Archive mit mehreren Logs sowie einzelne GZIP-Logs sicher entpacken und auswerten
-3. Webalizer-Format parsen (Apache-Style Log)
+3. Webserver-Zugriffslogs im Apache-/Nginx-Format parsen
 4. Statistiken anzeigen (Besucher, Seitenaufrufe, Bandbreite)
 5. Auffällige Requests und Adressen regelbasiert hervorheben
 6. IP-Adressen antippen und Regions-, ASN- sowie RDAP/WHOIS-Netzdaten anzeigen

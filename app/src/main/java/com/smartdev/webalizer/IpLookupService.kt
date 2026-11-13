@@ -186,7 +186,7 @@ object IpLookupService {
             connection.readTimeout = READ_TIMEOUT_MS
             connection.instanceFollowRedirects = true
             connection.setRequestProperty("Accept", accept)
-            connection.setRequestProperty("User-Agent", "Webalizer-Android/1.0")
+            connection.setRequestProperty("User-Agent", "AccessLog-Insight-Android/1.0")
 
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
