@@ -3,6 +3,7 @@ package com.smartdev.webalizer
 import java.io.File
 import java.net.URI
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 private val LOG_PATTERN = Regex(
@@ -71,6 +72,7 @@ data class DailyTraffic(
     val hits: Int,
     val files: Int,
     val pages: Int,
+    val visits: Int,
     val suspicious: Int
 )
 
@@ -259,18 +261,30 @@ class WebalizerLogParser {
             .takeLast(14)
             .map { it.key to it.value }
 
+        val visitDayCounter = mutableMapOf<String, Int>()
+        timestampsByAddress.values.forEach { timestamps ->
+            timestamps.sort()
+            var previousTimestamp: Long? = null
+            timestamps.forEach { timestamp ->
+                val previous = previousTimestamp
+                if (previous == null || timestamp - previous > VISIT_TIMEOUT_MILLIS) {
+                    val visitDay = dayFormatter.format(Date(timestamp))
+                    visitDayCounter[visitDay] = (visitDayCounter[visitDay] ?: 0) + 1
+                }
+                previousTimestamp = timestamp
+            }
+        }
+        val totalVisits = visitDayCounter.values.sum()
+
         val dailyTraffic = dayCounter.keys.sorted().takeLast(MAX_DAILY_TRAFFIC_DAYS).map { day ->
             DailyTraffic(
                 day = day,
                 hits = dayCounter[day] ?: 0,
                 files = fileDayCounter[day] ?: 0,
                 pages = pageDayCounter[day] ?: 0,
+                visits = visitDayCounter[day] ?: 0,
                 suspicious = suspiciousDayCounter[day] ?: 0
             )
-        }
-
-        val totalVisits = timestampsByAddress.values.sumOf { timestamps ->
-            countVisits(timestamps)
         }
 
         val allSuspiciousAddresses = riskByAddress.mapNotNull { (address, risk) ->
@@ -351,19 +365,6 @@ class WebalizerLogParser {
             reasons += SuspicionReason.UNUSUAL_METHOD
         }
         return reasons
-    }
-
-    private fun countVisits(timestamps: MutableList<Long>): Int {
-        if (timestamps.isEmpty()) return 0
-
-        timestamps.sort()
-        var visits = 1
-        for (index in 1 until timestamps.size) {
-            if (timestamps[index] - timestamps[index - 1] > VISIT_TIMEOUT_MILLIS) {
-                visits++
-            }
-        }
-        return visits
     }
 
     private fun extractHost(url: String): String? {

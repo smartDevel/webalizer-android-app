@@ -144,7 +144,22 @@ class WebalizerLogParserTest {
         assertEquals(4, day.hits)
         assertEquals(2, day.files)
         assertEquals(1, day.pages)
+        assertEquals(1, day.visits)
         assertEquals(1, day.suspicious)
+    }
+
+    @Test
+    fun assignsVisitStartsToTheirRespectiveDays() {
+        val stats = parse(
+            listOf(
+                line(timestamp = "10/Nov/2026:10:00:00 +0100"),
+                line(timestamp = "10/Nov/2026:10:20:00 +0100"),
+                line(timestamp = "11/Nov/2026:12:00:00 +0100")
+            )
+        )
+
+        assertEquals(listOf(1, 1), stats.dailyTraffic.map { it.visits })
+        assertEquals(2, stats.totalVisits)
     }
 
     private fun parse(lines: List<String>): LogStats {

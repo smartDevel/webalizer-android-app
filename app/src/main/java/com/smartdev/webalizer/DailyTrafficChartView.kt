@@ -19,6 +19,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
     private val hitsColor = Color.rgb(0, 121, 107)
     private val filesColor = Color.rgb(21, 101, 192)
     private val pagesColor = Color.rgb(0, 172, 193)
+    private val visitsColor = Color.rgb(249, 168, 37)
     private val suspiciousColor = Color.rgb(211, 47, 47)
     private val textColor = MaterialColors.getColor(
         this,
@@ -61,12 +62,15 @@ class DailyTrafficChartView(context: Context) : View(context) {
         drawLegend(canvas)
 
         val chartLeft = dp(48).toFloat()
-        val chartTop = dp(64).toFloat()
+        val chartTop = dp(88).toFloat()
         val chartRight = width - dp(12).toFloat()
         val chartBottom = height - dp(64).toFloat()
         val chartHeight = chartBottom - chartTop
         val maxValue = values.maxOf { item ->
-            max(max(item.hits, item.files), max(item.pages, item.suspicious))
+            max(
+                max(item.hits, item.files),
+                max(max(item.pages, item.visits), item.suspicious)
+            )
         }.coerceAtLeast(1)
 
         paint.strokeWidth = dp(1).toFloat()
@@ -84,9 +88,9 @@ class DailyTrafficChartView(context: Context) : View(context) {
         }
 
         val slotWidth = (chartRight - chartLeft) / values.size
-        val availableBarWidth = ((slotWidth - dp(10)) / 4f).coerceAtLeast(dp(4).toFloat())
-        val barWidth = availableBarWidth.coerceAtMost(dp(12).toFloat())
-        val groupWidth = barWidth * 4
+        val availableBarWidth = ((slotWidth - dp(10)) / 5f).coerceAtLeast(dp(4).toFloat())
+        val barWidth = availableBarWidth.coerceAtMost(dp(10).toFloat())
+        val groupWidth = barWidth * 5
 
         values.forEachIndexed { index, item ->
             val groupLeft = chartLeft + index * slotWidth + (slotWidth - groupWidth) / 2f
@@ -114,6 +118,16 @@ class DailyTrafficChartView(context: Context) : View(context) {
             drawBar(
                 canvas,
                 groupLeft + barWidth * 3,
+                item.visits,
+                maxValue,
+                chartTop,
+                chartBottom,
+                barWidth,
+                visitsColor
+            )
+            drawBar(
+                canvas,
+                groupLeft + barWidth * 4,
                 item.suspicious,
                 maxValue,
                 chartTop,
@@ -123,7 +137,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
             )
             drawSuspiciousValue(
                 canvas = canvas,
-                centerX = groupLeft + barWidth * 3.5f,
+                centerX = groupLeft + barWidth * 4.5f,
                 value = item.suspicious,
                 maxValue = maxValue,
                 chartTop = chartTop,
@@ -152,6 +166,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
             context.getString(R.string.chart_hits) to hitsColor,
             context.getString(R.string.chart_files) to filesColor,
             context.getString(R.string.chart_pages) to pagesColor,
+            context.getString(R.string.chart_visits) to visitsColor,
             context.getString(R.string.chart_suspicious) to suspiciousColor
         )
         val columnWidth = dp(150)
