@@ -16,7 +16,9 @@ import android.text.format.Formatter
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -169,8 +171,8 @@ class MainActivity : AppCompatActivity() {
                 isHorizontalScrollBarEnabled = true
                 addView(
                     chart,
-                    HorizontalScrollView.LayoutParams(
-                        HorizontalScrollView.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
                         dp(360)
                     )
                 )
