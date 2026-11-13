@@ -17,6 +17,7 @@ import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
 import android.view.View
 import android.widget.Button
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -55,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var topUrlsText: TextView
 
     private var hasResult = false
+    private var currentStats: LogStats? = null
     private var currentLogFiles: List<File> = emptyList()
     private var currentImportDirectory: File? = null
     private lateinit var expandableSections: List<ExpandableSection>
@@ -109,7 +111,7 @@ class MainActivity : AppCompatActivity() {
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.id.menu_import -> openFilePicker()
-                    R.id.menu_charts -> showChartsPreview()
+                    R.id.menu_charts -> showDailyCharts()
                     R.id.menu_help -> showHelp()
                     R.id.menu_about -> showAbout()
                     else -> return@setOnMenuItemClickListener false
@@ -120,22 +122,70 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showChartsPreview() {
-        val builder = AlertDialog.Builder(this)
-            .setTitle(R.string.charts_preview_title)
-            .setMessage(
-                if (hasResult) {
-                    R.string.charts_preview_message
-                } else {
-                    R.string.charts_preview_no_data
-                }
-            )
-            .setPositiveButton(R.string.close, null)
-
-        if (!hasResult) {
-            builder.setNeutralButton(R.string.import_file) { _, _ -> openFilePicker() }
+    private fun showDailyCharts() {
+        val stats = currentStats
+        if (stats == null || stats.dailyTraffic.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.charts_title)
+                .setMessage(R.string.charts_no_data)
+                .setNeutralButton(R.string.import_file) { _, _ -> openFilePicker() }
+                .setPositiveButton(R.string.close, null)
+                .show()
+            return
         }
-        builder.show()
+
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(4), dp(12), 0)
+        }
+        content.addView(
+            TextView(this).apply {
+                text = if (stats.activeDays > stats.dailyTraffic.size) {
+                    getString(
+                        R.string.charts_description_limited,
+                        stats.dailyTraffic.size,
+                        stats.activeDays
+                    )
+                } else {
+                    getString(R.string.charts_description)
+                }
+                setTextColor(
+                    MaterialColors.getColor(
+                        this,
+                        com.google.android.material.R.attr.colorOnSurfaceVariant,
+                        Color.DKGRAY
+                    )
+                )
+                textSize = 13f
+                setPadding(dp(8), dp(4), dp(8), dp(8))
+            }
+        )
+
+        val chart = DailyTrafficChartView(this).apply {
+            setData(stats.dailyTraffic)
+        }
+        content.addView(
+            HorizontalScrollView(this).apply {
+                isHorizontalScrollBarEnabled = true
+                addView(
+                    chart,
+                    HorizontalScrollView.LayoutParams(
+                        HorizontalScrollView.LayoutParams.WRAP_CONTENT,
+                        dp(360)
+                    )
+                )
+            },
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(372)
+            )
+        )
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.charts_title)
+            .setView(content)
+            .setPositiveButton(R.string.close, null)
+            .show()
     }
 
     private fun showHelp() {
@@ -243,6 +293,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showAnalysis(importedLog: ImportedLog) {
         val stats = importedLog.stats
+        currentStats = stats
         val numberFormat = NumberFormat.getIntegerInstance()
         val decimalFormat = NumberFormat.getNumberInstance().apply {
             minimumFractionDigits = 0

@@ -16,6 +16,7 @@ internal fun extractLogAddress(line: String): String? {
 private const val VISIT_TIMEOUT_MILLIS = 30 * 60 * 1000L
 private const val MAX_SUSPICIOUS_EVENTS = 50
 private const val MAX_SUSPICIOUS_ADDRESSES = 20
+private const val MAX_DAILY_TRAFFIC_DAYS = 180
 private const val ERROR_BURST_MINIMUM = 20
 private const val ERROR_BURST_RATIO = 0.70
 
@@ -56,12 +57,21 @@ data class LogStats(
     val busiestDay: Pair<String, Int>? = null,
     val busiestHour: Pair<String, Int>? = null,
     val hitsByDay: List<Pair<String, Int>> = emptyList(),
+    val dailyTraffic: List<DailyTraffic> = emptyList(),
     val topAddresses: List<Pair<String, Int>> = emptyList(),
     val suspiciousRequestCount: Int = 0,
     val suspiciousAddressCount: Int = 0,
     val suspiciousAddresses: List<SuspiciousAddress> = emptyList(),
     val suspiciousEvents: List<SuspiciousEvent> = emptyList(),
     val topUrls: List<Pair<String, Int>> = emptyList()
+)
+
+data class DailyTraffic(
+    val day: String,
+    val hits: Int,
+    val files: Int,
+    val pages: Int,
+    val suspicious: Int
 )
 
 enum class SuspicionReason {
@@ -117,6 +127,9 @@ class WebalizerLogParser {
         val addressCounter = mutableMapOf<String, Int>()
         val siteCounter = mutableMapOf<String, Int>()
         val dayCounter = mutableMapOf<String, Int>()
+        val fileDayCounter = mutableMapOf<String, Int>()
+        val pageDayCounter = mutableMapOf<String, Int>()
+        val suspiciousDayCounter = mutableMapOf<String, Int>()
         val hourCounter = mutableMapOf<String, Int>()
         val timestampsByAddress = mutableMapOf<String, MutableList<Long>>()
         val riskByAddress = mutableMapOf<String, AddressRisk>()
@@ -146,6 +159,8 @@ class WebalizerLogParser {
                     val status = match.groupValues[6].toIntOrNull() ?: 0
                     val bytesRaw = match.groupValues[7]
                     val userAgent = match.groupValues[9]
+                    val fileRequest = isFileRequest(status)
+                    val pageRequest = isPageRequest(method, url, status)
 
                     uniqueVisitors += ip
                     addressCounter[ip] = (addressCounter[ip] ?: 0) + 1
@@ -163,6 +178,7 @@ class WebalizerLogParser {
                         siteCounter[site] = (siteCounter[site] ?: 0) + 1
                     }
 
+                    var parsedDay: String? = null
                     val timestamp = runCatching { timestampParser.parse(timestampRaw) }.getOrNull()
                     if (timestamp != null) {
                         val timestampMillis = timestamp.time
@@ -179,14 +195,24 @@ class WebalizerLogParser {
                         )
 
                         val day = dayFormatter.format(timestamp)
+                        parsedDay = day
                         val hour = hourFormatter.format(timestamp)
                         dayCounter[day] = (dayCounter[day] ?: 0) + 1
+                        if (fileRequest) {
+                            fileDayCounter[day] = (fileDayCounter[day] ?: 0) + 1
+                        }
+                        if (pageRequest) {
+                            pageDayCounter[day] = (pageDayCounter[day] ?: 0) + 1
+                        }
                         hourCounter[hour] = (hourCounter[hour] ?: 0) + 1
                     }
 
                     val suspicionReasons = detectSuspicion(method, url, userAgent)
                     if (suspicionReasons.isNotEmpty()) {
                         suspiciousRequestCount++
+                        parsedDay?.let { day ->
+                            suspiciousDayCounter[day] = (suspiciousDayCounter[day] ?: 0) + 1
+                        }
                         addressRisk.suspiciousRequests++
                         addressRisk.reasons += suspicionReasons
                         suspiciousEvents +=
@@ -210,7 +236,7 @@ class WebalizerLogParser {
                     val bytes = bytesRaw.toLongOrNull() ?: 0L
                     totalBandwidth += bytes
 
-                    if (isPageRequest(method, url, status)) {
+                    if (pageRequest) {
                         totalPages++
                         urlCounter[url] = (urlCounter[url] ?: 0) + 1
                     }
@@ -232,6 +258,16 @@ class WebalizerLogParser {
             .sortedBy { it.key }
             .takeLast(14)
             .map { it.key to it.value }
+
+        val dailyTraffic = dayCounter.keys.sorted().takeLast(MAX_DAILY_TRAFFIC_DAYS).map { day ->
+            DailyTraffic(
+                day = day,
+                hits = dayCounter[day] ?: 0,
+                files = fileDayCounter[day] ?: 0,
+                pages = pageDayCounter[day] ?: 0,
+                suspicious = suspiciousDayCounter[day] ?: 0
+            )
+        }
 
         val totalVisits = timestampsByAddress.values.sumOf { timestamps ->
             countVisits(timestamps)
@@ -283,6 +319,7 @@ class WebalizerLogParser {
             busiestDay = dayCounter.maxByOrNull { it.value }?.let { it.key to it.value },
             busiestHour = hourCounter.maxByOrNull { it.value }?.let { it.key to it.value },
             hitsByDay = hitsByDay,
+            dailyTraffic = dailyTraffic,
             topAddresses = topAddresses,
             suspiciousRequestCount = suspiciousRequestCount,
             suspiciousAddressCount = allSuspiciousAddresses.size,
@@ -344,4 +381,6 @@ class WebalizerLogParser {
 
         return true
     }
+
+    private fun isFileRequest(status: Int): Boolean = status in 200..399
 }

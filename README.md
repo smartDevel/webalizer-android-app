@@ -19,7 +19,8 @@ Webserver-Zugriffslogs.
 6. IP-Adressen antippen und Regions-, ASN- sowie RDAP/WHOIS-Netzdaten anzeigen
 7. Vollständige Rohlog-Zeilen auffälliger IPs anzeigen, kopieren oder zur KI-Analyse teilen
 8. Ergebnisbereiche über einklappbare Abschnittsüberschriften übersichtlich steuern
-9. Zentrales Anwendungsmenü für Import, Diagramm-Vorschau, Hilfe und App-Informationen
+9. Zentrales Anwendungsmenü für Import, Tagesdiagramm, Hilfe und App-Informationen
+10. Horizontales Tagesdiagramm für Hits, Files, Pages und auffällige Requests
 
 Die Sicherheitsauswertung markiert unter anderem sensible Scan-Ziele,
 Traversal-/Injection-Muster, bekannte Scanner-User-Agents, ungewöhnliche

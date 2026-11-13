@@ -129,6 +129,24 @@ class WebalizerLogParserTest {
         )
     }
 
+    @Test
+    fun aggregatesDailyHitsFilesPagesAndSuspiciousRequests() {
+        val stats = parse(
+            listOf(
+                line(target = "/index.html", status = 200),
+                line(target = "/style.css", status = 200),
+                line(target = "/missing", status = 404),
+                line(target = "/.env", status = 404)
+            )
+        )
+
+        val day = stats.dailyTraffic.single()
+        assertEquals(4, day.hits)
+        assertEquals(2, day.files)
+        assertEquals(1, day.pages)
+        assertEquals(1, day.suspicious)
+    }
+
     private fun parse(lines: List<String>): LogStats {
         val file = createLogFile(lines)
         return try {
