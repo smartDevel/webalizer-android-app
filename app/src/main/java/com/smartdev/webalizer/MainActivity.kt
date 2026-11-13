@@ -25,6 +25,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.FileProvider
 import com.google.android.material.color.MaterialColors
@@ -84,6 +85,8 @@ class MainActivity : AppCompatActivity() {
         topAddressesText = findViewById(R.id.topAddressesText)
         topUrlsText = findViewById(R.id.topUrlsText)
 
+        findViewById<View>(R.id.btnAppMenu).setOnClickListener(::showAppMenu)
+
         setupExpandableSections()
 
         listOf(topAddressesText, suspiciousAddressesText, suspiciousEventsText).forEach { textView ->
@@ -98,6 +101,62 @@ class MainActivity : AppCompatActivity() {
 
     private fun openFilePicker() {
         openLogFiles.launch(arrayOf("*/*"))
+    }
+
+    private fun showAppMenu(anchor: View) {
+        PopupMenu(this, anchor).apply {
+            menuInflater.inflate(R.menu.main_menu, menu)
+            setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.menu_import -> openFilePicker()
+                    R.id.menu_charts -> showChartsPreview()
+                    R.id.menu_help -> showHelp()
+                    R.id.menu_about -> showAbout()
+                    else -> return@setOnMenuItemClickListener false
+                }
+                true
+            }
+            show()
+        }
+    }
+
+    private fun showChartsPreview() {
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.charts_preview_title)
+            .setMessage(
+                if (hasResult) {
+                    R.string.charts_preview_message
+                } else {
+                    R.string.charts_preview_no_data
+                }
+            )
+            .setPositiveButton(R.string.close, null)
+
+        if (!hasResult) {
+            builder.setNeutralButton(R.string.import_file) { _, _ -> openFilePicker() }
+        }
+        builder.show()
+    }
+
+    private fun showHelp() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.help_title)
+            .setMessage(R.string.help_message)
+            .setPositiveButton(R.string.close, null)
+            .show()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun showAbout() {
+        val versionName = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrNull() ?: getString(R.string.not_available)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.about_title)
+            .setMessage(getString(R.string.about_message, versionName))
+            .setPositiveButton(R.string.close, null)
+            .show()
     }
 
     private fun importLogs(uris: List<Uri>) {
