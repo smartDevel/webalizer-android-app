@@ -380,7 +380,7 @@ class MainActivity : AppCompatActivity() {
                                         R.string.visit_day_item,
                                         index + 1,
                                         visit.address,
-                                        formatObservedPeriod(
+                                        formatSuspiciousPeriod(
                                             visit.firstTimestamp,
                                             visit.lastTimestamp
                                         ),
