@@ -55,9 +55,32 @@ Repository: [smartDevel/webalizer-android-app](https://github.com/smartDevel/web
 
 ## Lizenz
 
-Dieses Projekt steht unter der [Apache License 2.0](LICENSE). Sie erlaubt auch
-die kommerzielle Nutzung, Änderung und Weitergabe unter Einhaltung der
-Lizenzbedingungen.
+Der aktuelle Stand ab Version 1.7 steht unter der
+[PolyForm Noncommercial License 1.0.0](LICENSE).
+Dritte dürfen die Software nur für nichtkommerzielle Zwecke nutzen, ändern und
+weitergeben. Die kommerzielle Nutzung durch Dritte ist nicht gestattet; die
+kommerziellen Rechte verbleiben ausschließlich beim Urheber Herbert Sablotny.
+
+Diese Lizenz ist eine Source-available-Lizenz und keine Open-Source-Lizenz im
+Sinne der Open Source Initiative.
+
+Hinweis zur Lizenzhistorie: Bereits unter einer früheren Lizenz wirksam
+erteilte Rechte bleiben für den jeweils damaligen Softwarestand bestehen.
+
+## Haftungsausschluss
+
+Die Software wird im gesetzlich zulässigen Umfang ohne Gewährleistung für
+Richtigkeit, Vollständigkeit, Verfügbarkeit oder Eignung für einen bestimmten
+Zweck bereitgestellt. Der Urheber haftet im gesetzlich zulässigen Umfang nicht
+für unmittelbare oder mittelbare Schäden aus der Nutzung oder Nichtverfügbarkeit
+der Software.
+
+Sicherheitsbewertungen, Herkunftsangaben und Handlungsempfehlungen sind
+automatisierte beziehungsweise heuristische Hinweise. Sie sind kein Beweis für
+einen Angriff und ersetzen keine fachkundige Prüfung. Maßnahmen wie IP-Sperren,
+Firewall-Regeln oder rechtliche Schritte müssen vor ihrer Umsetzung
+eigenverantwortlich geprüft werden. Zwingende gesetzliche Haftungsansprüche
+bleiben unberührt.
 
 ## Geplant
 

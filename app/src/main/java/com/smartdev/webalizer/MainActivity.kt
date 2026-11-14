@@ -237,6 +237,10 @@ class MainActivity : AppCompatActivity() {
             }
             append("\n\n")
             append(getString(R.string.about_license))
+            append("\n")
+            appendLink(getString(R.string.disclaimer_link)) {
+                showDisclaimer()
+            }
         }
 
         val messageView = TextView(this).apply {
@@ -266,6 +270,14 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.version_history_title)
             .setMessage(R.string.version_history)
+            .setPositiveButton(R.string.close, null)
+            .show()
+    }
+
+    private fun showDisclaimer() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.disclaimer_title)
+            .setMessage(R.string.disclaimer_message)
             .setPositiveButton(R.string.close, null)
             .show()
     }
