@@ -204,11 +204,108 @@ class MainActivity : AppCompatActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName
         }.getOrNull() ?: getString(R.string.not_available)
 
+        val content = SpannableStringBuilder().apply {
+            appendLink(getString(R.string.about_version, versionName)) {
+                showVersionHistory()
+            }
+            append("\n\n")
+            append(getString(R.string.about_description))
+            append("\n\n")
+            append(getString(R.string.about_author, getString(R.string.author_name)))
+            append("\n\n")
+            append(getString(R.string.about_feedback_prefix))
+            appendLink(getString(R.string.support_email)) {
+                openExternalIntent(
+                    Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:${getString(R.string.support_email)}")
+                        putExtra(
+                            Intent.EXTRA_SUBJECT,
+                            getString(R.string.feedback_subject, versionName)
+                        )
+                    }
+                )
+            }
+            append("\n")
+            append(getString(R.string.about_repository_prefix))
+            appendLink(getString(R.string.repository_label)) {
+                openExternalIntent(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse(getString(R.string.repository_url))
+                    )
+                )
+            }
+            append("\n\n")
+            append(getString(R.string.about_license))
+        }
+
+        val messageView = TextView(this).apply {
+            text = content
+            movementMethod = LinkMovementMethod.getInstance()
+            highlightColor = Color.TRANSPARENT
+            setTextColor(
+                MaterialColors.getColor(
+                    this,
+                    com.google.android.material.R.attr.colorOnSurface,
+                    Color.DKGRAY
+                )
+            )
+            textSize = 15f
+            setLineSpacing(0f, 1.12f)
+            setPadding(dp(24), dp(4), dp(24), 0)
+        }
+
         AlertDialog.Builder(this)
             .setTitle(R.string.about_title)
-            .setMessage(getString(R.string.about_message, versionName))
+            .setView(messageView)
             .setPositiveButton(R.string.close, null)
             .show()
+    }
+
+    private fun showVersionHistory() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.version_history_title)
+            .setMessage(R.string.version_history)
+            .setPositiveButton(R.string.close, null)
+            .show()
+    }
+
+    private fun SpannableStringBuilder.appendLink(
+        label: String,
+        onClick: () -> Unit
+    ) {
+        val start = length
+        val linkColor = MaterialColors.getColor(
+            this@MainActivity,
+            com.google.android.material.R.attr.colorPrimary,
+            Color.BLUE
+        )
+        append(label)
+        setSpan(
+            object : ClickableSpan() {
+                override fun onClick(widget: View) = onClick()
+
+                override fun updateDrawState(drawState: TextPaint) {
+                    super.updateDrawState(drawState)
+                    drawState.color = linkColor
+                    drawState.isUnderlineText = true
+                }
+            },
+            start,
+            length,
+            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+    }
+
+    private fun openExternalIntent(intent: Intent) {
+        runCatching { startActivity(intent) }
+            .onFailure {
+                Toast.makeText(
+                    this,
+                    R.string.no_matching_app,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
     }
 
     private fun importLogs(uris: List<Uri>) {

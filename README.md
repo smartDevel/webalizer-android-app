@@ -45,6 +45,20 @@ RDAP-Netzdaten bei `rdap.org` ab. Private, lokale und reservierte Adressen werde
 nicht an diese Dienste übertragen. Standortdaten sind technisch bedingt nur
 ungefähre Zuordnungen.
 
+## Urheber und Support
+
+Copyright © 2026 Herbert Sablotny
+
+Feedback und Support: [support@ways4.biz](mailto:support@ways4.biz)
+
+Repository: [smartDevel/webalizer-android-app](https://github.com/smartDevel/webalizer-android-app)
+
+## Lizenz
+
+Dieses Projekt steht unter der [Apache License 2.0](LICENSE). Sie erlaubt auch
+die kommerzielle Nutzung, Änderung und Weitergabe unter Einhaltung der
+Lizenzbedingungen.
+
 ## Geplant
 
 - Grafische Auswertung

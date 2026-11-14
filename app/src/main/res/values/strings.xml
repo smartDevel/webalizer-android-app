@@ -22,7 +22,20 @@
     <string name="help_title">Hilfe</string>
     <string name="help_message">1. Wähle eine oder mehrere Logdateien, ZIP- oder GZIP-Archive aus. Google Drive ist über das Seitenmenü des Android-Dateidialogs erreichbar.\n\n2. Öffne oder schließe die Ergebnisbereiche durch Antippen ihrer Überschriften.\n\n3. Tippe auf eine IP-Adresse, um Regions-/Netzdetails aufzurufen. Bei auffälligen Adressen kannst du zusätzlich das vollständige Zugriffslog anzeigen, kopieren oder zur weiteren Analyse teilen.\n\n4. Auffälligkeiten sind regelbasierte Hinweise und kein automatischer Beweis für einen Angriff.</string>
     <string name="about_title">Über AccessLog Insight</string>
-    <string name="about_message">Version %1$s\n\nAccessLog Insight wertet Webserver-Zugriffslogs lokal auf dem Android-Gerät aus. Die App fasst Traffic, Visits, URLs, Adressen und potenziell auffällige Requests zusammen.\n\nExterne IP-Abfragen werden nur für öffentliche Adressen verwendet. Standortangaben sind Näherungswerte.</string>
+    <string name="about_version">Version %1$s · Versionshistorie</string>
+    <string name="about_description">AccessLog Insight wertet Webserver-Zugriffslogs lokal auf dem Android-Gerät aus. Die App fasst Traffic, Visits, URLs, Adressen und potenziell auffällige Requests zusammen.\n\nExterne IP-Abfragen werden nur für öffentliche Adressen verwendet. Standortangaben sind Näherungswerte.</string>
+    <string name="author_name">Herbert Sablotny</string>
+    <string name="about_author">Urheber: %1$s</string>
+    <string name="about_feedback_prefix">Feedback und Support: </string>
+    <string name="support_email">support@ways4.biz</string>
+    <string name="feedback_subject">Feedback zu AccessLog Insight %1$s</string>
+    <string name="about_repository_prefix">Quellcode: </string>
+    <string name="repository_label">GitHub-Repository</string>
+    <string name="repository_url" translatable="false">https://github.com/smartDevel/webalizer-android-app</string>
+    <string name="about_license">Lizenz: Apache License 2.0 · kommerzielle Nutzung erlaubt</string>
+    <string name="version_history_title">Versionshistorie</string>
+    <string name="version_history">Version 1.6\n• Anklickbare Versionshistorie, Support- und Repository-Links\n• Urheber- und Lizenzangabe ergänzt\n\nVersion 1.5\n• Auffällige Requests als roter Anteil innerhalb der Hits\n• Exakte Visit-Zahlen im Tagesdiagramm\n\nVersion 1.4\n• Visits tagesgenau nach dem 30-Minuten-Fenster\n\nVersion 1.3\n• Grafische Tagesauswertung für Hits, Files und Pages\n\nVersion 1.2\n• Anwendungsmenü, Hilfe und Über-Dialog\n\nVersion 1.1\n• Eigenes App-Icon und aktualisierte App-Metadaten\n\nVersion 1.0\n• Lokaler Mehrfach-, ZIP- und GZIP-Import\n• Traffic-, Visit- und Sicherheitsanalyse</string>
+    <string name="no_matching_app">Keine passende App zum Öffnen des Links gefunden.</string>
     <string name="import_file">Logdateien auswählen</string>
     <string name="import_hint">Einzeln, mehrfach, ZIP oder GZIP · Gerät, Downloads oder Google Drive</string>
     <string name="loading_file">Dateien und Archive werden geladen und gemeinsam ausgewertet …</string>
