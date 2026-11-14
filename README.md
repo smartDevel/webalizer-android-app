@@ -22,6 +22,7 @@ Webserver-Zugriffslogs.
 9. Zentrales Anwendungsmenü für Import, Tagesdiagramm, Hilfe und App-Informationen
 10. Horizontales Tagesdiagramm für Hits, Files, Pages und Visits; auffällige Requests sind als roter Anteil innerhalb der Hits markiert
 11. Rote Hit-Anteile antippen und die auffälligen Ereignisse des jeweiligen Tages mit verlinkten IP-Adressen öffnen
+12. File- und Visit-Balken antippen und erfolgreiche Requests beziehungsweise 30-Minuten-Sitzungen des Tages untersuchen
 
 Die Sicherheitsauswertung markiert unter anderem sensible Scan-Ziele,
 Traversal-/Injection-Muster, bekannte Scanner-User-Agents, ungewöhnliche

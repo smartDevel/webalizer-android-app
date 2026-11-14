@@ -109,6 +109,34 @@ data class SuspiciousDayDetails(
     val events: List<SuspiciousEvent>
 )
 
+data class RequestEvent(
+    val timestamp: Long,
+    val address: String,
+    val method: String,
+    val target: String,
+    val status: Int
+)
+
+data class DailyRequestDetails(
+    val totalCount: Int,
+    val events: List<RequestEvent>
+)
+
+data class VisitDetail(
+    val address: String,
+    val firstTimestamp: Long,
+    val lastTimestamp: Long,
+    val hits: Int,
+    val files: Int,
+    val pages: Int,
+    val suspicious: Int
+)
+
+data class DailyVisitDetails(
+    val totalCount: Int,
+    val visits: List<VisitDetail>
+)
+
 private data class AddressRisk(
     var totalHits: Int = 0,
     var clientErrors: Int = 0,
@@ -117,6 +145,13 @@ private data class AddressRisk(
     var lastTimestamp: Long? = null,
     val sourceFiles: MutableSet<Int> = mutableSetOf(),
     val reasons: MutableSet<SuspicionReason> = mutableSetOf()
+)
+
+private data class VisitRequest(
+    val timestamp: Long,
+    val isFile: Boolean,
+    val isPage: Boolean,
+    val isSuspicious: Boolean
 )
 
 class WebalizerLogParser {
@@ -167,6 +202,123 @@ class WebalizerLogParser {
         return SuspiciousDayDetails(
             totalCount = totalCount,
             events = events.sortedBy { it.timestamp ?: Long.MIN_VALUE }
+        )
+    }
+
+    fun findFileEvents(
+        files: Iterable<File>,
+        day: String,
+        maxEvents: Int = 500
+    ): DailyRequestDetails {
+        require(maxEvents > 0) { "maxEvents must be positive" }
+        val events = mutableListOf<RequestEvent>()
+        var totalCount = 0
+        val timestampParser = SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss Z", Locale.US).apply {
+            isLenient = false
+        }
+        val dayFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+
+        files.forEach { file ->
+            file.bufferedReader().useLines { lines ->
+                lines.forEach lineLoop@{ line ->
+                    val match = LOG_PATTERN.find(line) ?: return@lineLoop
+                    val status = match.groupValues[6].toIntOrNull() ?: return@lineLoop
+                    if (!isFileRequest(status)) return@lineLoop
+                    val timestamp = runCatching {
+                        timestampParser.parse(match.groupValues[3])
+                    }.getOrNull() ?: return@lineLoop
+                    if (dayFormatter.format(timestamp) != day) return@lineLoop
+
+                    totalCount++
+                    if (events.size < maxEvents) {
+                        events += RequestEvent(
+                            timestamp = timestamp.time,
+                            address = match.groupValues[2],
+                            method = match.groupValues[4],
+                            target = match.groupValues[5],
+                            status = status
+                        )
+                    }
+                }
+            }
+        }
+
+        return DailyRequestDetails(
+            totalCount = totalCount,
+            events = events.sortedBy(RequestEvent::timestamp)
+        )
+    }
+
+    fun findVisits(
+        files: Iterable<File>,
+        day: String,
+        maxVisits: Int = 500
+    ): DailyVisitDetails {
+        require(maxVisits > 0) { "maxVisits must be positive" }
+        val requestsByAddress = mutableMapOf<String, MutableList<VisitRequest>>()
+        val timestampParser = SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss Z", Locale.US).apply {
+            isLenient = false
+        }
+        val dayFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+
+        files.forEach { file ->
+            file.bufferedReader().useLines { lines ->
+                lines.forEach lineLoop@{ line ->
+                    val match = LOG_PATTERN.find(line) ?: return@lineLoop
+                    val timestamp = runCatching {
+                        timestampParser.parse(match.groupValues[3])
+                    }.getOrNull() ?: return@lineLoop
+                    val method = match.groupValues[4]
+                    val target = match.groupValues[5]
+                    val status = match.groupValues[6].toIntOrNull() ?: 0
+                    requestsByAddress.getOrPut(match.groupValues[2]) { mutableListOf() } +=
+                        VisitRequest(
+                            timestamp = timestamp.time,
+                            isFile = isFileRequest(status),
+                            isPage = isPageRequest(method, target, status),
+                            isSuspicious = detectSuspicion(
+                                method,
+                                target,
+                                match.groupValues[9]
+                            ).isNotEmpty()
+                        )
+                }
+            }
+        }
+
+        val selectedVisits = mutableListOf<VisitDetail>()
+        requestsByAddress.forEach { (address, requests) ->
+            requests.sortBy(VisitRequest::timestamp)
+            var sessionStart = 0
+
+            fun addSession(endExclusive: Int) {
+                if (endExclusive <= sessionStart) return
+                val session = requests.subList(sessionStart, endExclusive)
+                if (dayFormatter.format(Date(session.first().timestamp)) != day) return
+                selectedVisits += VisitDetail(
+                    address = address,
+                    firstTimestamp = session.first().timestamp,
+                    lastTimestamp = session.last().timestamp,
+                    hits = session.size,
+                    files = session.count(VisitRequest::isFile),
+                    pages = session.count(VisitRequest::isPage),
+                    suspicious = session.count(VisitRequest::isSuspicious)
+                )
+            }
+
+            for (index in 1 until requests.size) {
+                if (requests[index].timestamp - requests[index - 1].timestamp > VISIT_TIMEOUT_MILLIS) {
+                    addSession(index)
+                    sessionStart = index
+                }
+            }
+            addSession(requests.size)
+        }
+
+        selectedVisits.sortBy(VisitDetail::firstTimestamp)
+        return DailyVisitDetails(
+            totalCount = selectedVisits.size,
+            visits = selectedVisits.take(maxVisits)
         )
     }
 

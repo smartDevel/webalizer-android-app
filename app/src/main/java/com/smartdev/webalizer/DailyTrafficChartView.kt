@@ -17,12 +17,14 @@ class DailyTrafficChartView(context: Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val numberFormat = NumberFormat.getIntegerInstance()
     private var values: List<DailyTraffic> = emptyList()
-    private val suspiciousHitTargets = mutableListOf<SuspiciousHitTarget>()
+    private val chartTargets = mutableListOf<ChartTarget>()
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private var downX = 0f
     private var downY = 0f
-    private var pressedTarget: SuspiciousHitTarget? = null
+    private var pressedTarget: ChartTarget? = null
     private var onSuspiciousDayClick: ((DailyTraffic) -> Unit)? = null
+    private var onFilesDayClick: ((DailyTraffic) -> Unit)? = null
+    private var onVisitsDayClick: ((DailyTraffic) -> Unit)? = null
 
     private val hitsColor = Color.rgb(0, 121, 107)
     private val filesColor = Color.rgb(21, 101, 192)
@@ -59,6 +61,16 @@ class DailyTrafficChartView(context: Context) : View(context) {
         isClickable = true
     }
 
+    fun setOnFilesDayClickListener(listener: (DailyTraffic) -> Unit) {
+        onFilesDayClick = listener
+        isClickable = true
+    }
+
+    fun setOnVisitsDayClickListener(listener: (DailyTraffic) -> Unit) {
+        onVisitsDayClick = listener
+        isClickable = true
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val desiredWidth = max(dp(320), dp(62) + values.size * dp(72))
         val desiredHeight = dp(360)
@@ -72,7 +84,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
         super.onDraw(canvas)
         if (values.isEmpty()) return
 
-        suspiciousHitTargets.clear()
+        chartTargets.clear()
 
         drawLegend(canvas)
 
@@ -104,7 +116,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
 
         val slotWidth = (chartRight - chartLeft) / values.size
         val availableBarWidth = ((slotWidth - dp(10)) / 4f).coerceAtLeast(dp(4).toFloat())
-        val barWidth = availableBarWidth.coerceAtMost(dp(12).toFloat())
+        val barWidth = availableBarWidth.coerceAtMost(dp(14).toFloat())
         val groupWidth = barWidth * 4
 
         values.forEachIndexed { index, item ->
@@ -120,12 +132,13 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 barWidth = barWidth
             )
             if (suspiciousBounds != null) {
-                suspiciousHitTargets += SuspiciousHitTarget(
+                chartTargets += ChartTarget(
                     bounds = expandTouchBounds(suspiciousBounds, chartTop, chartBottom),
-                    traffic = item
+                    traffic = item,
+                    metric = ChartMetric.SUSPICIOUS
                 )
             }
-            drawBar(
+            val filesBounds = drawBar(
                 canvas,
                 groupLeft + barWidth,
                 item.files,
@@ -135,6 +148,13 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 barWidth,
                 filesColor
             )
+            if (filesBounds != null) {
+                chartTargets += ChartTarget(
+                    bounds = expandTouchBounds(filesBounds, chartTop, chartBottom),
+                    traffic = item,
+                    metric = ChartMetric.FILES
+                )
+            }
             drawBar(
                 canvas,
                 groupLeft + barWidth * 2,
@@ -145,7 +165,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 barWidth,
                 pagesColor
             )
-            drawBar(
+            val visitsBounds = drawBar(
                 canvas,
                 groupLeft + barWidth * 3,
                 item.visits,
@@ -155,6 +175,13 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 barWidth,
                 visitsColor
             )
+            if (visitsBounds != null) {
+                chartTargets += ChartTarget(
+                    bounds = expandTouchBounds(visitsBounds, chartTop, chartBottom),
+                    traffic = item,
+                    metric = ChartMetric.VISITS
+                )
+            }
             drawValueLabel(
                 canvas = canvas,
                 centerX = groupLeft + barWidth * 3.5f,
@@ -186,7 +213,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                val target = suspiciousHitTargets.lastOrNull { it.bounds.contains(event.x, event.y) }
+                val target = chartTargets.lastOrNull { it.bounds.contains(event.x, event.y) }
                     ?: return false
                 downX = event.x
                 downY = event.y
@@ -207,7 +234,11 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 pressedTarget = null
                 if (target != null && target.bounds.contains(event.x, event.y)) {
                     performClick()
-                    onSuspiciousDayClick?.invoke(target.traffic)
+                    when (target.metric) {
+                        ChartMetric.SUSPICIOUS -> onSuspiciousDayClick?.invoke(target.traffic)
+                        ChartMetric.FILES -> onFilesDayClick?.invoke(target.traffic)
+                        ChartMetric.VISITS -> onVisitsDayClick?.invoke(target.traffic)
+                    }
                     return true
                 }
             }
@@ -258,16 +289,23 @@ class DailyTrafficChartView(context: Context) : View(context) {
         chartBottom: Float,
         barWidth: Float,
         color: Int
-    ) {
-        if (value <= 0) return
+    ): RectF? {
+        if (value <= 0) return null
         val height = (value.toFloat() / maxValue) * (chartBottom - chartTop)
+        val bounds = RectF(
+            left + dp(1),
+            chartBottom - height,
+            left + barWidth - dp(1),
+            chartBottom
+        )
         paint.color = color
         canvas.drawRoundRect(
-            RectF(left + dp(1), chartBottom - height, left + barWidth - dp(1), chartBottom),
+            bounds,
             dp(2).toFloat(),
             dp(2).toFloat(),
             paint
         )
+        return bounds
     }
 
     private fun drawStackedHits(
@@ -332,12 +370,11 @@ class DailyTrafficChartView(context: Context) : View(context) {
 
     private fun expandTouchBounds(bounds: RectF, chartTop: Float, chartBottom: Float): RectF {
         val minimumSize = dp(32).toFloat()
-        val horizontalPadding = ((minimumSize - bounds.width()) / 2f).coerceAtLeast(0f)
         val verticalPadding = ((minimumSize - bounds.height()) / 2f).coerceAtLeast(0f)
         return RectF(
-            bounds.left - horizontalPadding,
+            bounds.left - dp(1),
             (bounds.top - verticalPadding).coerceAtLeast(chartTop),
-            bounds.right + horizontalPadding,
+            bounds.right + dp(1),
             (bounds.bottom + verticalPadding).coerceAtMost(chartBottom)
         )
     }
@@ -372,8 +409,15 @@ class DailyTrafficChartView(context: Context) : View(context) {
 
     private fun sp(value: Int): Float = value * resources.displayMetrics.scaledDensity
 
-    private data class SuspiciousHitTarget(
+    private data class ChartTarget(
         val bounds: RectF,
-        val traffic: DailyTraffic
+        val traffic: DailyTraffic,
+        val metric: ChartMetric
     )
+
+    private enum class ChartMetric {
+        SUSPICIOUS,
+        FILES,
+        VISITS
+    }
 }

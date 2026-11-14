@@ -193,6 +193,66 @@ class WebalizerLogParserTest {
         }
     }
 
+    @Test
+    fun loadsSuccessfulFileRequestsForSelectedDay() {
+        val file = createLogFile(
+            listOf(
+                line(target = "/index.html", status = 200),
+                line(target = "/redirect", status = 302),
+                line(target = "/missing", status = 404),
+                line(
+                    target = "/other-day",
+                    status = 200,
+                    timestamp = "12/Nov/2026:08:00:00 +0100"
+                )
+            )
+        )
+
+        try {
+            val details = WebalizerLogParser().findFileEvents(
+                files = listOf(file),
+                day = "2026-11-11"
+            )
+
+            assertEquals(2, details.totalCount)
+            assertEquals(listOf(200, 302), details.events.map { it.status })
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun loadsVisitsForSelectedDayUsingThirtyMinuteWindow() {
+        val first = createLogFile(
+            listOf(
+                line(timestamp = "11/Nov/2026:10:00:00 +0100"),
+                line(timestamp = "11/Nov/2026:10:20:00 +0100")
+            )
+        )
+        val second = createLogFile(
+            listOf(
+                line(timestamp = "11/Nov/2026:10:51:00 +0100"),
+                line(timestamp = "12/Nov/2026:08:00:00 +0100")
+            )
+        )
+
+        try {
+            val details = WebalizerLogParser().findVisits(
+                files = listOf(first, second),
+                day = "2026-11-11",
+                maxVisits = 1
+            )
+
+            assertEquals(2, details.totalCount)
+            assertEquals(1, details.visits.size)
+            assertEquals(2, details.visits.single().hits)
+            assertEquals(2, details.visits.single().files)
+        } finally {
+            first.delete()
+            second.delete()
+        }
+    }
+
     private fun parse(lines: List<String>): LogStats {
         val file = createLogFile(lines)
         return try {

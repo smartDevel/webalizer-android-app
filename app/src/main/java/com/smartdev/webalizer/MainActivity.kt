@@ -166,6 +166,8 @@ class MainActivity : AppCompatActivity() {
         val chart = DailyTrafficChartView(this).apply {
             setData(stats.dailyTraffic)
             setOnSuspiciousDayClickListener(::showSuspiciousDayDetails)
+            setOnFilesDayClickListener(::showFileDayDetails)
+            setOnVisitsDayClickListener(::showVisitDayDetails)
         }
         content.addView(
             HorizontalScrollView(this).apply {
@@ -271,6 +273,159 @@ class MainActivity : AppCompatActivity() {
                 }
             )
         }
+    }
+
+    private fun showFileDayDetails(traffic: DailyTraffic) {
+        if (currentLogFiles.isEmpty()) {
+            Toast.makeText(this, R.string.ip_log_sources_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        val content = createLinkedDetailsText(R.string.file_day_loading)
+        val dialog = createDayDetailsDialog(
+            getString(R.string.file_day_title, formatDay(traffic.day)),
+            content
+        )
+
+        lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    WebalizerLogParser().findFileEvents(currentLogFiles, traffic.day)
+                }
+            }
+            if (!dialog.isShowing) return@launch
+
+            content.text = result.fold(
+                onSuccess = { details ->
+                    SpannableStringBuilder().apply {
+                        append(
+                            getString(
+                                R.string.file_day_summary,
+                                NumberFormat.getIntegerInstance().format(details.totalCount)
+                            )
+                        )
+                        if (details.events.isEmpty()) {
+                            append("\n\n").append(getString(R.string.file_day_empty))
+                        } else {
+                            append("\n\n")
+                            append(
+                                buildLinkedItems(
+                                    details.events,
+                                    addressSelector = { it.address },
+                                    onAddressClick = ::showSuspiciousAddressActions
+                                ) { index, event ->
+                                    getString(
+                                        R.string.file_day_item,
+                                        index + 1,
+                                        formatTimestamp(event.timestamp),
+                                        event.address,
+                                        event.method,
+                                        event.target,
+                                        event.status
+                                    )
+                                }
+                            )
+                        }
+                        appendLimitedNote(details.events.size, details.totalCount)
+                    }
+                },
+                onFailure = { exception ->
+                    getString(
+                        R.string.file_day_error,
+                        exception.message ?: getString(R.string.not_available)
+                    )
+                }
+            )
+        }
+    }
+
+    private fun showVisitDayDetails(traffic: DailyTraffic) {
+        if (currentLogFiles.isEmpty()) {
+            Toast.makeText(this, R.string.ip_log_sources_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        val content = createLinkedDetailsText(R.string.visit_day_loading)
+        val dialog = createDayDetailsDialog(
+            getString(R.string.visit_day_title, formatDay(traffic.day)),
+            content
+        )
+
+        lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    WebalizerLogParser().findVisits(currentLogFiles, traffic.day)
+                }
+            }
+            if (!dialog.isShowing) return@launch
+
+            content.text = result.fold(
+                onSuccess = { details ->
+                    SpannableStringBuilder().apply {
+                        append(
+                            getString(
+                                R.string.visit_day_summary,
+                                NumberFormat.getIntegerInstance().format(details.totalCount)
+                            )
+                        )
+                        if (details.visits.isEmpty()) {
+                            append("\n\n").append(getString(R.string.visit_day_empty))
+                        } else {
+                            append("\n\n")
+                            append(
+                                buildLinkedItems(
+                                    details.visits,
+                                    addressSelector = { it.address },
+                                    onAddressClick = ::showSuspiciousAddressActions
+                                ) { index, visit ->
+                                    getString(
+                                        R.string.visit_day_item,
+                                        index + 1,
+                                        visit.address,
+                                        formatObservedPeriod(
+                                            visit.firstTimestamp,
+                                            visit.lastTimestamp
+                                        ),
+                                        NumberFormat.getIntegerInstance().format(visit.hits),
+                                        NumberFormat.getIntegerInstance().format(visit.files),
+                                        NumberFormat.getIntegerInstance().format(visit.pages),
+                                        NumberFormat.getIntegerInstance().format(visit.suspicious)
+                                    )
+                                }
+                            )
+                        }
+                        appendLimitedNote(details.visits.size, details.totalCount)
+                    }
+                },
+                onFailure = { exception ->
+                    getString(
+                        R.string.visit_day_error,
+                        exception.message ?: getString(R.string.not_available)
+                    )
+                }
+            )
+        }
+    }
+
+    private fun createLinkedDetailsText(loadingText: Int): TextView = TextView(this).apply {
+        setPadding(dp(24), dp(8), dp(24), dp(16))
+        setText(loadingText)
+        textSize = 14f
+        movementMethod = LinkMovementMethod.getInstance()
+        highlightColor = Color.TRANSPARENT
+    }
+
+    private fun createDayDetailsDialog(title: String, content: TextView): AlertDialog {
+        return AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(ScrollView(this).apply { addView(content) })
+            .setPositiveButton(R.string.close, null)
+            .create()
+            .also { it.show() }
+    }
+
+    private fun SpannableStringBuilder.appendLimitedNote(displayed: Int, total: Int) {
+        if (total <= displayed) return
+        append("\n\n")
+        append(getString(R.string.day_details_limited, displayed, total))
     }
 
     private fun showHelp() {
