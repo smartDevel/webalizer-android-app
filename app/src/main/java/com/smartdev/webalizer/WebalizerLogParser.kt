@@ -104,6 +104,11 @@ data class SuspiciousEvent(
     val reasons: Set<SuspicionReason>
 )
 
+data class SuspiciousDayDetails(
+    val totalCount: Int,
+    val events: List<SuspiciousEvent>
+)
+
 private data class AddressRisk(
     var totalHits: Int = 0,
     var clientErrors: Int = 0,
@@ -116,6 +121,54 @@ private data class AddressRisk(
 
 class WebalizerLogParser {
     fun parse(file: File): LogStats = parse(listOf(file))
+
+    fun findSuspiciousEvents(
+        files: Iterable<File>,
+        day: String,
+        maxEvents: Int = 500
+    ): SuspiciousDayDetails {
+        require(maxEvents > 0) { "maxEvents must be positive" }
+        val events = mutableListOf<SuspiciousEvent>()
+        var totalCount = 0
+        val timestampParser = SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss Z", Locale.US).apply {
+            isLenient = false
+        }
+        val dayFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+
+        files.forEach { file ->
+            file.bufferedReader().useLines { lines ->
+                lines.forEach lineLoop@{ line ->
+                    val match = LOG_PATTERN.find(line) ?: return@lineLoop
+                    val timestamp = runCatching {
+                        timestampParser.parse(match.groupValues[3])
+                    }.getOrNull() ?: return@lineLoop
+                    if (dayFormatter.format(timestamp) != day) return@lineLoop
+
+                    val method = match.groupValues[4]
+                    val target = match.groupValues[5]
+                    val reasons = detectSuspicion(method, target, match.groupValues[9])
+                    if (reasons.isEmpty()) return@lineLoop
+
+                    totalCount++
+                    if (events.size < maxEvents) {
+                        events += SuspiciousEvent(
+                            timestamp = timestamp.time,
+                            address = match.groupValues[2],
+                            method = method,
+                            target = target,
+                            status = match.groupValues[6].toIntOrNull() ?: 0,
+                            reasons = reasons
+                        )
+                    }
+                }
+            }
+        }
+
+        return SuspiciousDayDetails(
+            totalCount = totalCount,
+            events = events.sortedBy { it.timestamp ?: Long.MIN_VALUE }
+        )
+    }
 
     fun parse(files: Iterable<File>): LogStats {
         var totalLines = 0

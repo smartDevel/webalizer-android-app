@@ -5,7 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import com.google.android.material.color.MaterialColors
 import java.text.NumberFormat
 import kotlin.math.max
@@ -15,6 +17,12 @@ class DailyTrafficChartView(context: Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val numberFormat = NumberFormat.getIntegerInstance()
     private var values: List<DailyTraffic> = emptyList()
+    private val suspiciousHitTargets = mutableListOf<SuspiciousHitTarget>()
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private var downX = 0f
+    private var downY = 0f
+    private var pressedTarget: SuspiciousHitTarget? = null
+    private var onSuspiciousDayClick: ((DailyTraffic) -> Unit)? = null
 
     private val hitsColor = Color.rgb(0, 121, 107)
     private val filesColor = Color.rgb(21, 101, 192)
@@ -46,6 +54,11 @@ class DailyTrafficChartView(context: Context) : View(context) {
         invalidate()
     }
 
+    fun setOnSuspiciousDayClickListener(listener: (DailyTraffic) -> Unit) {
+        onSuspiciousDayClick = listener
+        isClickable = true
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val desiredWidth = max(dp(320), dp(62) + values.size * dp(72))
         val desiredHeight = dp(360)
@@ -58,6 +71,8 @@ class DailyTrafficChartView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (values.isEmpty()) return
+
+        suspiciousHitTargets.clear()
 
         drawLegend(canvas)
 
@@ -94,7 +109,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
 
         values.forEachIndexed { index, item ->
             val groupLeft = chartLeft + index * slotWidth + (slotWidth - groupWidth) / 2f
-            drawStackedHits(
+            val suspiciousBounds = drawStackedHits(
                 canvas = canvas,
                 left = groupLeft,
                 hits = item.hits,
@@ -104,6 +119,12 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 chartBottom = chartBottom,
                 barWidth = barWidth
             )
+            if (suspiciousBounds != null) {
+                suspiciousHitTargets += SuspiciousHitTarget(
+                    bounds = expandTouchBounds(suspiciousBounds, chartTop, chartBottom),
+                    traffic = item
+                )
+            }
             drawBar(
                 canvas,
                 groupLeft + barWidth,
@@ -160,6 +181,44 @@ class DailyTrafficChartView(context: Context) : View(context) {
         paint.strokeWidth = dp(1).toFloat()
         canvas.drawLine(chartLeft, chartTop, chartLeft, chartBottom, paint)
         canvas.drawLine(chartLeft, chartBottom, chartRight, chartBottom, paint)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                val target = suspiciousHitTargets.lastOrNull { it.bounds.contains(event.x, event.y) }
+                    ?: return false
+                downX = event.x
+                downY = event.y
+                pressedTarget = target
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (
+                    kotlin.math.abs(event.x - downX) > touchSlop ||
+                    kotlin.math.abs(event.y - downY) > touchSlop
+                ) {
+                    pressedTarget = null
+                }
+                return true
+            }
+            MotionEvent.ACTION_UP -> {
+                val target = pressedTarget
+                pressedTarget = null
+                if (target != null && target.bounds.contains(event.x, event.y)) {
+                    performClick()
+                    onSuspiciousDayClick?.invoke(target.traffic)
+                    return true
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> pressedTarget = null
+        }
+        return super.onTouchEvent(event)
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
     }
 
     private fun drawLegend(canvas: Canvas) {
@@ -220,8 +279,8 @@ class DailyTrafficChartView(context: Context) : View(context) {
         chartTop: Float,
         chartBottom: Float,
         barWidth: Float
-    ) {
-        if (hits <= 0) return
+    ): RectF? {
+        if (hits <= 0) return null
         val suspiciousHits = suspicious.coerceIn(0, hits)
         val normalHits = hits - suspiciousHits
         val chartHeight = chartBottom - chartTop
@@ -243,14 +302,15 @@ class DailyTrafficChartView(context: Context) : View(context) {
             )
         }
         if (suspiciousHits > 0) {
+            val suspiciousBounds = RectF(
+                left + dp(1),
+                chartBottom - totalHeight,
+                left + barWidth - dp(1),
+                chartBottom - normalHeight
+            )
             paint.color = suspiciousColor
             canvas.drawRoundRect(
-                RectF(
-                    left + dp(1),
-                    chartBottom - totalHeight,
-                    left + barWidth - dp(1),
-                    chartBottom - normalHeight
-                ),
+                suspiciousBounds,
                 dp(2).toFloat(),
                 dp(2).toFloat(),
                 paint
@@ -265,7 +325,21 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 chartBottom = chartBottom,
                 color = suspiciousColor
             )
+            return suspiciousBounds
         }
+        return null
+    }
+
+    private fun expandTouchBounds(bounds: RectF, chartTop: Float, chartBottom: Float): RectF {
+        val minimumSize = dp(32).toFloat()
+        val horizontalPadding = ((minimumSize - bounds.width()) / 2f).coerceAtLeast(0f)
+        val verticalPadding = ((minimumSize - bounds.height()) / 2f).coerceAtLeast(0f)
+        return RectF(
+            bounds.left - horizontalPadding,
+            (bounds.top - verticalPadding).coerceAtLeast(chartTop),
+            bounds.right + horizontalPadding,
+            (bounds.bottom + verticalPadding).coerceAtMost(chartBottom)
+        )
     }
 
     private fun drawValueLabel(
@@ -297,4 +371,9 @@ class DailyTrafficChartView(context: Context) : View(context) {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun sp(value: Int): Float = value * resources.displayMetrics.scaledDensity
+
+    private data class SuspiciousHitTarget(
+        val bounds: RectF,
+        val traffic: DailyTraffic
+    )
 }

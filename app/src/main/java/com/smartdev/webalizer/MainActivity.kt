@@ -165,6 +165,7 @@ class MainActivity : AppCompatActivity() {
 
         val chart = DailyTrafficChartView(this).apply {
             setData(stats.dailyTraffic)
+            setOnSuspiciousDayClickListener(::showSuspiciousDayDetails)
         }
         content.addView(
             HorizontalScrollView(this).apply {
@@ -188,6 +189,88 @@ class MainActivity : AppCompatActivity() {
             .setView(content)
             .setPositiveButton(R.string.close, null)
             .show()
+    }
+
+    private fun showSuspiciousDayDetails(traffic: DailyTraffic) {
+        if (currentLogFiles.isEmpty()) {
+            Toast.makeText(this, R.string.ip_log_sources_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val content = TextView(this).apply {
+            setPadding(dp(24), dp(8), dp(24), dp(16))
+            text = getString(R.string.suspicious_day_loading)
+            textSize = 14f
+            movementMethod = LinkMovementMethod.getInstance()
+            highlightColor = Color.TRANSPARENT
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.suspicious_day_title, formatDay(traffic.day)))
+            .setView(ScrollView(this).apply { addView(content) })
+            .setPositiveButton(R.string.close, null)
+            .create()
+        dialog.show()
+
+        lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    WebalizerLogParser().findSuspiciousEvents(currentLogFiles, traffic.day)
+                }
+            }
+            if (!dialog.isShowing) return@launch
+
+            content.text = result.fold(
+                onSuccess = { details ->
+                    SpannableStringBuilder().apply {
+                        append(
+                            getString(
+                                R.string.suspicious_day_summary,
+                                NumberFormat.getIntegerInstance().format(details.totalCount)
+                            )
+                        )
+                        if (details.events.isEmpty()) {
+                            append("\n\n").append(getString(R.string.no_suspicious_events))
+                        } else {
+                            append("\n\n")
+                            append(
+                                buildLinkedItems(
+                                    details.events,
+                                    addressSelector = { it.address },
+                                    onAddressClick = ::showSuspiciousAddressActions
+                                ) { index, event ->
+                                    getString(
+                                        R.string.suspicious_event_item,
+                                        index + 1,
+                                        formatTimestamp(event.timestamp),
+                                        event.address,
+                                        event.method,
+                                        event.target,
+                                        event.status,
+                                        formatSuspicionReasons(event.reasons)
+                                    )
+                                }
+                            )
+                        }
+                        if (details.totalCount > details.events.size) {
+                            append("\n\n")
+                            append(
+                                getString(
+                                    R.string.suspicious_day_limited,
+                                    details.events.size,
+                                    details.totalCount
+                                )
+                            )
+                        }
+                    }
+                },
+                onFailure = { exception ->
+                    getString(
+                        R.string.suspicious_day_error,
+                        exception.message ?: getString(R.string.not_available)
+                    )
+                }
+            )
+        }
     }
 
     private fun showHelp() {

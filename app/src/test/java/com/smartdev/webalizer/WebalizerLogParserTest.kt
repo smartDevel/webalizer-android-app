@@ -162,6 +162,37 @@ class WebalizerLogParserTest {
         assertEquals(2, stats.totalVisits)
     }
 
+    @Test
+    fun loadsSuspiciousEventsForSelectedDayAcrossFilesAndKeepsTotal() {
+        val first = createLogFile(
+            listOf(
+                line(target = "/.env", timestamp = "11/Nov/2026:08:00:00 +0100"),
+                line(target = "/safe", timestamp = "11/Nov/2026:09:00:00 +0100")
+            )
+        )
+        val second = createLogFile(
+            listOf(
+                line(target = "/.git/config", timestamp = "11/Nov/2026:10:00:00 +0100"),
+                line(target = "/.env", timestamp = "12/Nov/2026:08:00:00 +0100")
+            )
+        )
+
+        try {
+            val details = WebalizerLogParser().findSuspiciousEvents(
+                files = listOf(first, second),
+                day = "2026-11-11",
+                maxEvents = 1
+            )
+
+            assertEquals(2, details.totalCount)
+            assertEquals(1, details.events.size)
+            assertEquals("/.env", details.events.single().target)
+        } finally {
+            first.delete()
+            second.delete()
+        }
+    }
+
     private fun parse(lines: List<String>): LogStats {
         val file = createLogFile(lines)
         return try {
