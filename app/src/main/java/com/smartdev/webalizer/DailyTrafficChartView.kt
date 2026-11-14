@@ -121,7 +121,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
         drawLegend(canvas)
 
         val chartLeft = dp(48).toFloat()
-        val chartTop = dp(106).toFloat()
+        val chartTop = dp(132).toFloat()
         val chartRight = width - dp(12).toFloat()
         val chartBottom = height - dp(64).toFloat()
         val chartHeight = chartBottom - chartTop
@@ -188,15 +188,6 @@ class DailyTrafficChartView(context: Context) : View(context) {
                     metric = ChartMetric.FILES
                 )
             }
-            drawByteValueLabel(
-                canvas = canvas,
-                centerX = groupLeft + barWidth * 1.5f,
-                bytes = item.fileBytes,
-                maxBytes = maxFileBytes,
-                chartTop = chartTop,
-                chartBottom = chartBottom,
-                color = filesColor
-            )
             drawBar(
                 canvas,
                 groupLeft + barWidth * 2,
@@ -224,18 +215,8 @@ class DailyTrafficChartView(context: Context) : View(context) {
                     metric = ChartMetric.VISITS
                 )
             }
-            drawValueLabel(
-                canvas = canvas,
-                centerX = groupLeft + barWidth * 3.5f,
-                barValue = item.visits,
-                labelValue = item.visits,
-                maxValue = maxValue,
-                chartTop = chartTop,
-                chartBottom = chartBottom,
-                color = visitsColor
-            )
-
             val labelX = chartLeft + (index + 0.5f) * slotWidth
+            drawDayValueLabels(canvas, labelX, item, chartTop)
             val labelY = chartBottom + dp(10)
             paint.color = textColor
             paint.textAlign = Paint.Align.RIGHT
@@ -425,17 +406,6 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 dp(2).toFloat(),
                 paint
             )
-            drawValueLabel(
-                canvas = canvas,
-                centerX = left + barWidth / 2f,
-                barValue = hits,
-                labelValue = suspiciousHits,
-                maxValue = maxValue,
-                chartTop = chartTop,
-                chartBottom = chartBottom,
-                color = suspiciousColor,
-                verticalOffset = 0
-            )
             return suspiciousBounds
         }
         return null
@@ -452,50 +422,39 @@ class DailyTrafficChartView(context: Context) : View(context) {
         )
     }
 
-    private fun drawValueLabel(
+    private fun drawDayValueLabels(
         canvas: Canvas,
         centerX: Float,
-        barValue: Int,
-        labelValue: Int,
-        maxValue: Int,
-        chartTop: Float,
-        chartBottom: Float,
-        color: Int,
-        verticalOffset: Int = 0
+        traffic: DailyTraffic,
+        chartTop: Float
     ) {
-        if (barValue <= 0) return
-        val barHeight = (barValue.toFloat() / maxValue) * (chartBottom - chartTop)
-        val labelY = chartBottom - barHeight - dp(5 + verticalOffset)
-        drawLabelChip(
-            canvas = canvas,
-            text = numberFormat.format(labelValue),
-            centerX = centerX,
-            baselineY = labelY,
-            backgroundColor = color,
-            minimumBaseline = chartTop - dp(5 + verticalOffset)
-        )
-    }
-
-    private fun drawByteValueLabel(
-        canvas: Canvas,
-        centerX: Float,
-        bytes: Long,
-        maxBytes: Long,
-        chartTop: Float,
-        chartBottom: Float,
-        color: Int
-    ) {
-        if (bytes <= 0L) return
-        val barHeight = (bytes.toDouble() / maxBytes.toDouble() * (chartBottom - chartTop)).toFloat()
-        val labelY = chartBottom - barHeight - dp(21)
-        drawLabelChip(
-            canvas = canvas,
-            text = Formatter.formatShortFileSize(context, bytes),
-            centerX = centerX,
-            baselineY = labelY,
-            backgroundColor = color,
-            minimumBaseline = chartTop - dp(21)
-        )
+        if (traffic.suspicious > 0) {
+            drawLabelChip(
+                canvas,
+                numberFormat.format(traffic.suspicious),
+                centerX,
+                chartTop - dp(48),
+                suspiciousColor
+            )
+        }
+        if (traffic.fileBytes > 0L) {
+            drawLabelChip(
+                canvas,
+                Formatter.formatShortFileSize(context, traffic.fileBytes),
+                centerX,
+                chartTop - dp(27),
+                filesColor
+            )
+        }
+        if (traffic.visits > 0) {
+            drawLabelChip(
+                canvas,
+                numberFormat.format(traffic.visits),
+                centerX,
+                chartTop - dp(6),
+                visitsColor
+            )
+        }
     }
 
     private fun drawLabelChip(
@@ -503,27 +462,25 @@ class DailyTrafficChartView(context: Context) : View(context) {
         text: String,
         centerX: Float,
         baselineY: Float,
-        backgroundColor: Int,
-        minimumBaseline: Float
+        backgroundColor: Int
     ) {
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = sp(9)
         paint.isFakeBoldText = true
-        val safeBaseline = baselineY.coerceAtLeast(minimumBaseline)
         val horizontalPadding = dp(4).toFloat()
         val verticalPadding = dp(2).toFloat()
         val textWidth = paint.measureText(text)
         val metrics = paint.fontMetrics
         val background = RectF(
             centerX - textWidth / 2f - horizontalPadding,
-            safeBaseline + metrics.ascent - verticalPadding,
+            baselineY + metrics.ascent - verticalPadding,
             centerX + textWidth / 2f + horizontalPadding,
-            safeBaseline + metrics.descent + verticalPadding
+            baselineY + metrics.descent + verticalPadding
         )
         paint.color = backgroundColor
         canvas.drawRoundRect(background, dp(4).toFloat(), dp(4).toFloat(), paint)
         paint.color = labelTextColor
-        canvas.drawText(text, centerX, safeBaseline, paint)
+        canvas.drawText(text, centerX, baselineY, paint)
         paint.isFakeBoldText = false
     }
 
