@@ -5,6 +5,7 @@ import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.PriorityQueue
 
 private val LOG_PATTERN = Regex(
     """^(?:(\S+)\s+)?(\S+)\s+\S+\s+\S+\s+\[([^\]]+)\]\s+\"(\S+)\s+(\S+)(?:\s+[^\"]*)?\"\s+(\d{3})\s+(\S+)(?:\s+\"([^\"]*)\"\s+\"([^\"]*)\")?.*"""
@@ -71,6 +72,7 @@ data class DailyTraffic(
     val day: String,
     val hits: Int,
     val files: Int,
+    val fileBytes: Long,
     val pages: Int,
     val visits: Int,
     val suspicious: Int
@@ -114,11 +116,13 @@ data class RequestEvent(
     val address: String,
     val method: String,
     val target: String,
-    val status: Int
+    val status: Int,
+    val bytes: Long
 )
 
 data class DailyRequestDetails(
     val totalCount: Int,
+    val totalBytes: Long,
     val events: List<RequestEvent>
 )
 
@@ -211,8 +215,11 @@ class WebalizerLogParser {
         maxEvents: Int = 500
     ): DailyRequestDetails {
         require(maxEvents > 0) { "maxEvents must be positive" }
-        val events = mutableListOf<RequestEvent>()
+        val largestEvents = PriorityQueue<RequestEvent>(
+            compareBy<RequestEvent> { it.bytes }.thenBy { it.timestamp }
+        )
         var totalCount = 0
+        var totalBytes = 0L
         val timestampParser = SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss Z", Locale.US).apply {
             isLenient = false
         }
@@ -229,15 +236,22 @@ class WebalizerLogParser {
                     }.getOrNull() ?: return@lineLoop
                     if (dayFormatter.format(timestamp) != day) return@lineLoop
 
+                    val bytes = match.groupValues[7].toLongOrNull() ?: 0L
                     totalCount++
-                    if (events.size < maxEvents) {
-                        events += RequestEvent(
-                            timestamp = timestamp.time,
-                            address = match.groupValues[2],
-                            method = match.groupValues[4],
-                            target = match.groupValues[5],
-                            status = status
-                        )
+                    totalBytes += bytes
+                    val event = RequestEvent(
+                        timestamp = timestamp.time,
+                        address = match.groupValues[2],
+                        method = match.groupValues[4],
+                        target = match.groupValues[5],
+                        status = status,
+                        bytes = bytes
+                    )
+                    if (largestEvents.size < maxEvents) {
+                        largestEvents += event
+                    } else if (event.bytes > largestEvents.peek().bytes) {
+                        largestEvents.poll()
+                        largestEvents += event
                     }
                 }
             }
@@ -245,7 +259,11 @@ class WebalizerLogParser {
 
         return DailyRequestDetails(
             totalCount = totalCount,
-            events = events.sortedBy(RequestEvent::timestamp)
+            totalBytes = totalBytes,
+            events = largestEvents.sortedWith(
+                compareByDescending<RequestEvent> { it.bytes }
+                    .thenByDescending { it.timestamp }
+            )
         )
     }
 
@@ -335,6 +353,7 @@ class WebalizerLogParser {
         val siteCounter = mutableMapOf<String, Int>()
         val dayCounter = mutableMapOf<String, Int>()
         val fileDayCounter = mutableMapOf<String, Int>()
+        val fileByteDayCounter = mutableMapOf<String, Long>()
         val pageDayCounter = mutableMapOf<String, Int>()
         val suspiciousDayCounter = mutableMapOf<String, Int>()
         val hourCounter = mutableMapOf<String, Int>()
@@ -365,6 +384,7 @@ class WebalizerLogParser {
                     val url = match.groupValues[5]
                     val status = match.groupValues[6].toIntOrNull() ?: 0
                     val bytesRaw = match.groupValues[7]
+                    val bytes = bytesRaw.toLongOrNull() ?: 0L
                     val userAgent = match.groupValues[9]
                     val fileRequest = isFileRequest(status)
                     val pageRequest = isPageRequest(method, url, status)
@@ -407,6 +427,7 @@ class WebalizerLogParser {
                         dayCounter[day] = (dayCounter[day] ?: 0) + 1
                         if (fileRequest) {
                             fileDayCounter[day] = (fileDayCounter[day] ?: 0) + 1
+                            fileByteDayCounter[day] = (fileByteDayCounter[day] ?: 0L) + bytes
                         }
                         if (pageRequest) {
                             pageDayCounter[day] = (pageDayCounter[day] ?: 0) + 1
@@ -440,7 +461,6 @@ class WebalizerLogParser {
                         }
                     }
 
-                    val bytes = bytesRaw.toLongOrNull() ?: 0L
                     totalBandwidth += bytes
 
                     if (pageRequest) {
@@ -486,6 +506,7 @@ class WebalizerLogParser {
                 day = day,
                 hits = dayCounter[day] ?: 0,
                 files = fileDayCounter[day] ?: 0,
+                fileBytes = fileByteDayCounter[day] ?: 0L,
                 pages = pageDayCounter[day] ?: 0,
                 visits = visitDayCounter[day] ?: 0,
                 suspicious = suspiciousDayCounter[day] ?: 0

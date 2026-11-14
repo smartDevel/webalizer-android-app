@@ -143,6 +143,7 @@ class WebalizerLogParserTest {
         val day = stats.dailyTraffic.single()
         assertEquals(4, day.hits)
         assertEquals(2, day.files)
+        assertEquals(1024L, day.fileBytes)
         assertEquals(1, day.pages)
         assertEquals(1, day.visits)
         assertEquals(1, day.suspicious)
@@ -197,8 +198,8 @@ class WebalizerLogParserTest {
     fun loadsSuccessfulFileRequestsForSelectedDay() {
         val file = createLogFile(
             listOf(
-                line(target = "/index.html", status = 200),
-                line(target = "/redirect", status = 302),
+                line(target = "/index.html", status = 200, bytes = 128),
+                line(target = "/redirect", status = 302, bytes = 2048),
                 line(target = "/missing", status = 404),
                 line(
                     target = "/other-day",
@@ -215,7 +216,9 @@ class WebalizerLogParserTest {
             )
 
             assertEquals(2, details.totalCount)
-            assertEquals(listOf(200, 302), details.events.map { it.status })
+            assertEquals(2176L, details.totalBytes)
+            assertEquals(listOf(2048L, 128L), details.events.map { it.bytes })
+            assertEquals(listOf(302, 200), details.events.map { it.status })
         } finally {
             file.delete()
         }
@@ -273,11 +276,12 @@ class WebalizerLogParserTest {
         timestamp: String = "11/Nov/2026:10:00:00 +0100",
         target: String = "/index.html",
         status: Int = 200,
+        bytes: Long = 512,
         userAgent: String = "Mozilla/5.0",
         host: String? = null
     ): String {
         val prefix = host?.let { "$it " }.orEmpty()
         return "$prefix$address - - [$timestamp] \"GET $target HTTP/1.1\" " +
-            "$status 512 \"-\" \"$userAgent\""
+            "$status $bytes \"-\" \"$userAgent\""
     }
 }

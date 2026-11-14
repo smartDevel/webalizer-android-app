@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.text.format.Formatter
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -95,10 +96,11 @@ class DailyTrafficChartView(context: Context) : View(context) {
         val chartHeight = chartBottom - chartTop
         val maxValue = values.maxOf { item ->
             max(
-                max(item.hits, item.files),
+                item.hits,
                 max(item.pages, item.visits)
             )
         }.coerceAtLeast(1)
+        val maxFileBytes = values.maxOf(DailyTraffic::fileBytes).coerceAtLeast(1L)
 
         paint.strokeWidth = dp(1).toFloat()
         paint.textSize = sp(10)
@@ -138,11 +140,11 @@ class DailyTrafficChartView(context: Context) : View(context) {
                     metric = ChartMetric.SUSPICIOUS
                 )
             }
-            val filesBounds = drawBar(
+            val filesBounds = drawByteBar(
                 canvas,
                 groupLeft + barWidth,
-                item.files,
-                maxValue,
+                item.fileBytes,
+                maxFileBytes,
                 chartTop,
                 chartBottom,
                 barWidth,
@@ -155,6 +157,15 @@ class DailyTrafficChartView(context: Context) : View(context) {
                     metric = ChartMetric.FILES
                 )
             }
+            drawByteValueLabel(
+                canvas = canvas,
+                centerX = groupLeft + barWidth * 1.5f,
+                bytes = item.fileBytes,
+                maxBytes = maxFileBytes,
+                chartTop = chartTop,
+                chartBottom = chartBottom,
+                color = filesColor
+            )
             drawBar(
                 canvas,
                 groupLeft + barWidth * 2,
@@ -308,6 +319,29 @@ class DailyTrafficChartView(context: Context) : View(context) {
         return bounds
     }
 
+    private fun drawByteBar(
+        canvas: Canvas,
+        left: Float,
+        bytes: Long,
+        maxBytes: Long,
+        chartTop: Float,
+        chartBottom: Float,
+        barWidth: Float,
+        color: Int
+    ): RectF? {
+        if (bytes <= 0L) return null
+        val height = (bytes.toDouble() / maxBytes.toDouble() * (chartBottom - chartTop)).toFloat()
+        val bounds = RectF(
+            left + dp(1),
+            chartBottom - height,
+            left + barWidth - dp(1),
+            chartBottom
+        )
+        paint.color = color
+        canvas.drawRoundRect(bounds, dp(2).toFloat(), dp(2).toFloat(), paint)
+        return bounds
+    }
+
     private fun drawStackedHits(
         canvas: Canvas,
         left: Float,
@@ -397,6 +431,29 @@ class DailyTrafficChartView(context: Context) : View(context) {
         paint.textSize = sp(9)
         paint.isFakeBoldText = true
         canvas.drawText(numberFormat.format(labelValue), centerX, labelY, paint)
+        paint.isFakeBoldText = false
+    }
+
+    private fun drawByteValueLabel(
+        canvas: Canvas,
+        centerX: Float,
+        bytes: Long,
+        maxBytes: Long,
+        chartTop: Float,
+        chartBottom: Float,
+        color: Int
+    ) {
+        if (bytes <= 0L) return
+        val barHeight = (bytes.toDouble() / maxBytes.toDouble() * (chartBottom - chartTop)).toFloat()
+        val labelY = (chartBottom - barHeight - dp(4)).coerceAtLeast(chartTop + sp(9))
+        paint.color = color
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = sp(8)
+        paint.isFakeBoldText = true
+        canvas.save()
+        canvas.rotate(-45f, centerX, labelY)
+        canvas.drawText(Formatter.formatShortFileSize(context, bytes), centerX, labelY, paint)
+        canvas.restore()
         paint.isFakeBoldText = false
     }
 

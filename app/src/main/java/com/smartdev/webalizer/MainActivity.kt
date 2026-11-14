@@ -300,7 +300,8 @@ class MainActivity : AppCompatActivity() {
                         append(
                             getString(
                                 R.string.file_day_summary,
-                                NumberFormat.getIntegerInstance().format(details.totalCount)
+                                NumberFormat.getIntegerInstance().format(details.totalCount),
+                                Formatter.formatFileSize(this@MainActivity, details.totalBytes)
                             )
                         )
                         if (details.events.isEmpty()) {
@@ -320,7 +321,8 @@ class MainActivity : AppCompatActivity() {
                                         event.address,
                                         event.method,
                                         event.target,
-                                        event.status
+                                        event.status,
+                                        Formatter.formatFileSize(this@MainActivity, event.bytes)
                                     )
                                 }
                             )

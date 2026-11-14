@@ -20,7 +20,8 @@ Webserver-Zugriffslogs.
 7. Vollständige Rohlog-Zeilen auffälliger IPs anzeigen, kopieren oder zur KI-Analyse teilen
 8. Ergebnisbereiche über einklappbare Abschnittsüberschriften übersichtlich steuern
 9. Zentrales Anwendungsmenü für Import, Tagesdiagramm, Hilfe und App-Informationen
-10. Horizontales Tagesdiagramm für Hits, Files, Pages und Visits; auffällige Requests sind als roter Anteil innerhalb der Hits markiert
+10. Horizontales Tagesdiagramm für Hits, File-Volumen, Pages und Visits; auffällige Requests sind als roter Anteil innerhalb der Hits markiert
+11. Anklickbare File-Säulen mit täglichem Übertragungsvolumen; Detailzugriffe zeigen ihre Größe und sind danach absteigend sortiert
 11. Rote Hit-Anteile antippen und die auffälligen Ereignisse des jeweiligen Tages mit verlinkten IP-Adressen öffnen
 12. File- und Visit-Balken antippen und erfolgreiche Requests beziehungsweise 30-Minuten-Sitzungen des Tages untersuchen
 
