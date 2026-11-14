@@ -509,7 +509,11 @@ class MainActivity : AppCompatActivity() {
     private fun showVersionHistory() {
         AlertDialog.Builder(this)
             .setTitle(R.string.version_history_title)
-            .setMessage(R.string.version_history)
+            .setMessage(
+                getString(R.string.version_history_current) +
+                    "\n\n" +
+                    getString(R.string.version_history)
+            )
             .setPositiveButton(R.string.close, null)
             .show()
     }

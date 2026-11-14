@@ -7,11 +7,13 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.text.format.Formatter
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewConfiguration
 import com.google.android.material.color.MaterialColors
 import java.text.NumberFormat
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 class DailyTrafficChartView(context: Context) : View(context) {
 
@@ -20,6 +22,33 @@ class DailyTrafficChartView(context: Context) : View(context) {
     private var values: List<DailyTraffic> = emptyList()
     private val chartTargets = mutableListOf<ChartTarget>()
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private val scaleDetector = ScaleGestureDetector(
+        context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                pressedTarget = null
+                parent?.requestDisallowInterceptTouchEvent(true)
+                return true
+            }
+
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                val nextScale = (chartScale * detector.scaleFactor).coerceIn(MIN_SCALE, MAX_SCALE)
+                if (kotlin.math.abs(nextScale - chartScale) < 0.01f) return true
+                chartScale = nextScale
+                requestLayout()
+                invalidate()
+                return true
+            }
+
+            override fun onScaleEnd(detector: ScaleGestureDetector) {
+                parent?.requestDisallowInterceptTouchEvent(false)
+                announceForAccessibility(
+                    context.getString(R.string.chart_zoom_level, (chartScale * 100).roundToInt())
+                )
+            }
+        }
+    )
+    private var chartScale = 1f
     private var downX = 0f
     private var downY = 0f
     private var pressedTarget: ChartTarget? = null
@@ -42,6 +71,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
         com.google.android.material.R.attr.colorOutlineVariant,
         Color.LTGRAY
     )
+    private val labelTextColor = Color.WHITE
 
     init {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
@@ -73,7 +103,8 @@ class DailyTrafficChartView(context: Context) : View(context) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val desiredWidth = max(dp(320), dp(62) + values.size * dp(72))
+        val baseWidth = max(dp(320), dp(62) + values.size * dp(72))
+        val desiredWidth = (baseWidth * chartScale).roundToInt()
         val desiredHeight = dp(360)
         setMeasuredDimension(
             resolveSize(desiredWidth, widthMeasureSpec),
@@ -90,7 +121,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
         drawLegend(canvas)
 
         val chartLeft = dp(48).toFloat()
-        val chartTop = dp(88).toFloat()
+        val chartTop = dp(106).toFloat()
         val chartRight = width - dp(12).toFloat()
         val chartBottom = height - dp(64).toFloat()
         val chartHeight = chartBottom - chartTop
@@ -222,13 +253,17 @@ class DailyTrafficChartView(context: Context) : View(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleDetector.onTouchEvent(event)
+        if (event.pointerCount > 1 || scaleDetector.isInProgress) {
+            pressedTarget = null
+            parent?.requestDisallowInterceptTouchEvent(true)
+            return true
+        }
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                val target = chartTargets.lastOrNull { it.bounds.contains(event.x, event.y) }
-                    ?: return false
                 downX = event.x
                 downY = event.y
-                pressedTarget = target
+                pressedTarget = chartTargets.lastOrNull { it.bounds.contains(event.x, event.y) }
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
@@ -253,7 +288,10 @@ class DailyTrafficChartView(context: Context) : View(context) {
                     return true
                 }
             }
-            MotionEvent.ACTION_CANCEL -> pressedTarget = null
+            MotionEvent.ACTION_CANCEL -> {
+                pressedTarget = null
+                parent?.requestDisallowInterceptTouchEvent(false)
+            }
         }
         return super.onTouchEvent(event)
     }
@@ -395,7 +433,8 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 maxValue = maxValue,
                 chartTop = chartTop,
                 chartBottom = chartBottom,
-                color = suspiciousColor
+                color = suspiciousColor,
+                verticalOffset = 0
             )
             return suspiciousBounds
         }
@@ -421,17 +460,20 @@ class DailyTrafficChartView(context: Context) : View(context) {
         maxValue: Int,
         chartTop: Float,
         chartBottom: Float,
-        color: Int
+        color: Int,
+        verticalOffset: Int = 0
     ) {
         if (barValue <= 0) return
         val barHeight = (barValue.toFloat() / maxValue) * (chartBottom - chartTop)
-        val labelY = (chartBottom - barHeight - dp(4)).coerceAtLeast(chartTop + sp(9))
-        paint.color = color
-        paint.textAlign = Paint.Align.CENTER
-        paint.textSize = sp(9)
-        paint.isFakeBoldText = true
-        canvas.drawText(numberFormat.format(labelValue), centerX, labelY, paint)
-        paint.isFakeBoldText = false
+        val labelY = chartBottom - barHeight - dp(5 + verticalOffset)
+        drawLabelChip(
+            canvas = canvas,
+            text = numberFormat.format(labelValue),
+            centerX = centerX,
+            baselineY = labelY,
+            backgroundColor = color,
+            minimumBaseline = chartTop - dp(5 + verticalOffset)
+        )
     }
 
     private fun drawByteValueLabel(
@@ -445,15 +487,43 @@ class DailyTrafficChartView(context: Context) : View(context) {
     ) {
         if (bytes <= 0L) return
         val barHeight = (bytes.toDouble() / maxBytes.toDouble() * (chartBottom - chartTop)).toFloat()
-        val labelY = (chartBottom - barHeight - dp(4)).coerceAtLeast(chartTop + sp(9))
-        paint.color = color
+        val labelY = chartBottom - barHeight - dp(21)
+        drawLabelChip(
+            canvas = canvas,
+            text = Formatter.formatShortFileSize(context, bytes),
+            centerX = centerX,
+            baselineY = labelY,
+            backgroundColor = color,
+            minimumBaseline = chartTop - dp(21)
+        )
+    }
+
+    private fun drawLabelChip(
+        canvas: Canvas,
+        text: String,
+        centerX: Float,
+        baselineY: Float,
+        backgroundColor: Int,
+        minimumBaseline: Float
+    ) {
         paint.textAlign = Paint.Align.CENTER
-        paint.textSize = sp(8)
+        paint.textSize = sp(9)
         paint.isFakeBoldText = true
-        canvas.save()
-        canvas.rotate(-45f, centerX, labelY)
-        canvas.drawText(Formatter.formatShortFileSize(context, bytes), centerX, labelY, paint)
-        canvas.restore()
+        val safeBaseline = baselineY.coerceAtLeast(minimumBaseline)
+        val horizontalPadding = dp(4).toFloat()
+        val verticalPadding = dp(2).toFloat()
+        val textWidth = paint.measureText(text)
+        val metrics = paint.fontMetrics
+        val background = RectF(
+            centerX - textWidth / 2f - horizontalPadding,
+            safeBaseline + metrics.ascent - verticalPadding,
+            centerX + textWidth / 2f + horizontalPadding,
+            safeBaseline + metrics.descent + verticalPadding
+        )
+        paint.color = backgroundColor
+        canvas.drawRoundRect(background, dp(4).toFloat(), dp(4).toFloat(), paint)
+        paint.color = labelTextColor
+        canvas.drawText(text, centerX, safeBaseline, paint)
         paint.isFakeBoldText = false
     }
 
@@ -476,5 +546,10 @@ class DailyTrafficChartView(context: Context) : View(context) {
         SUSPICIOUS,
         FILES,
         VISITS
+    }
+
+    private companion object {
+        const val MIN_SCALE = 0.75f
+        const val MAX_SCALE = 2.5f
     }
 }
