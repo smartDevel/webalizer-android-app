@@ -11,13 +11,13 @@
     <string name="menu_about">Über AccessLog Insight</string>
     <string name="charts_title">Tagesauswertung</string>
     <string name="charts_no_data">Für die grafische Auswertung werden importierte Logdaten mit gültigen Zeitstempeln benötigt.</string>
-    <string name="charts_description">Gruppierte Tageswerte. Horizontal wischen, um weitere Tage anzuzeigen. Files sind erfolgreiche oder umgeleitete Antworten (HTTP 2xx/3xx); Pages schließen statische Assets aus; Visits verwenden das 30-Minuten-Fenster.</string>
-    <string name="charts_description_limited">Die letzten %1$d von %2$d aktiven Tagen werden angezeigt. Horizontal wischen, um weitere Tage anzuzeigen. Files sind HTTP-2xx/3xx-Antworten; Pages schließen statische Assets aus; Visits verwenden das 30-Minuten-Fenster.</string>
+    <string name="charts_description">Gruppierte Tageswerte. Der rote Abschnitt ist der auffällige Anteil innerhalb der Hits; die rote Zahl nennt dessen Umfang. Visits sind gelb/orange beschriftet und verwenden das 30-Minuten-Fenster. Horizontal wischen, um weitere Tage anzuzeigen.</string>
+    <string name="charts_description_limited">Die letzten %1$d von %2$d aktiven Tagen werden angezeigt. Der rote Abschnitt ist der auffällige Anteil innerhalb der Hits; Visits verwenden das 30-Minuten-Fenster. Horizontal wischen, um weitere Tage anzuzeigen.</string>
     <string name="chart_hits">Hits</string>
     <string name="chart_files">Files</string>
     <string name="chart_pages">Pages</string>
     <string name="chart_visits">Visits</string>
-    <string name="chart_suspicious">Auffällig</string>
+    <string name="chart_suspicious">Auffällig (in Hits)</string>
     <string name="chart_accessibility_summary">Tagesdiagramm mit Hits, Files, Pages, Visits und auffälligen Requests für %1$d aktive Tage</string>
     <string name="help_title">Hilfe</string>
     <string name="help_message">1. Wähle eine oder mehrere Logdateien, ZIP- oder GZIP-Archive aus. Google Drive ist über das Seitenmenü des Android-Dateidialogs erreichbar.\n\n2. Öffne oder schließe die Ergebnisbereiche durch Antippen ihrer Überschriften.\n\n3. Tippe auf eine IP-Adresse, um Regions-/Netzdetails aufzurufen. Bei auffälligen Adressen kannst du zusätzlich das vollständige Zugriffslog anzeigen, kopieren oder zur weiteren Analyse teilen.\n\n4. Auffälligkeiten sind regelbasierte Hinweise und kein automatischer Beweis für einen Angriff.</string>

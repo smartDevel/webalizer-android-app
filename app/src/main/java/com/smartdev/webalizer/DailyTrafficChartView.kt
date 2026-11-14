@@ -69,7 +69,7 @@ class DailyTrafficChartView(context: Context) : View(context) {
         val maxValue = values.maxOf { item ->
             max(
                 max(item.hits, item.files),
-                max(max(item.pages, item.visits), item.suspicious)
+                max(item.pages, item.visits)
             )
         }.coerceAtLeast(1)
 
@@ -88,13 +88,22 @@ class DailyTrafficChartView(context: Context) : View(context) {
         }
 
         val slotWidth = (chartRight - chartLeft) / values.size
-        val availableBarWidth = ((slotWidth - dp(10)) / 5f).coerceAtLeast(dp(4).toFloat())
-        val barWidth = availableBarWidth.coerceAtMost(dp(10).toFloat())
-        val groupWidth = barWidth * 5
+        val availableBarWidth = ((slotWidth - dp(10)) / 4f).coerceAtLeast(dp(4).toFloat())
+        val barWidth = availableBarWidth.coerceAtMost(dp(12).toFloat())
+        val groupWidth = barWidth * 4
 
         values.forEachIndexed { index, item ->
             val groupLeft = chartLeft + index * slotWidth + (slotWidth - groupWidth) / 2f
-            drawBar(canvas, groupLeft, item.hits, maxValue, chartTop, chartBottom, barWidth, hitsColor)
+            drawStackedHits(
+                canvas = canvas,
+                left = groupLeft,
+                hits = item.hits,
+                suspicious = item.suspicious,
+                maxValue = maxValue,
+                chartTop = chartTop,
+                chartBottom = chartBottom,
+                barWidth = barWidth
+            )
             drawBar(
                 canvas,
                 groupLeft + barWidth,
@@ -125,23 +134,15 @@ class DailyTrafficChartView(context: Context) : View(context) {
                 barWidth,
                 visitsColor
             )
-            drawBar(
-                canvas,
-                groupLeft + barWidth * 4,
-                item.suspicious,
-                maxValue,
-                chartTop,
-                chartBottom,
-                barWidth,
-                suspiciousColor
-            )
-            drawSuspiciousValue(
+            drawValueLabel(
                 canvas = canvas,
-                centerX = groupLeft + barWidth * 4.5f,
-                value = item.suspicious,
+                centerX = groupLeft + barWidth * 3.5f,
+                barValue = item.visits,
+                labelValue = item.visits,
                 maxValue = maxValue,
                 chartTop = chartTop,
-                chartBottom = chartBottom
+                chartBottom = chartBottom,
+                color = visitsColor
             )
 
             val labelX = chartLeft + (index + 0.5f) * slotWidth
@@ -164,10 +165,10 @@ class DailyTrafficChartView(context: Context) : View(context) {
     private fun drawLegend(canvas: Canvas) {
         val entries = listOf(
             context.getString(R.string.chart_hits) to hitsColor,
+            context.getString(R.string.chart_suspicious) to suspiciousColor,
             context.getString(R.string.chart_files) to filesColor,
             context.getString(R.string.chart_pages) to pagesColor,
-            context.getString(R.string.chart_visits) to visitsColor,
-            context.getString(R.string.chart_suspicious) to suspiciousColor
+            context.getString(R.string.chart_visits) to visitsColor
         )
         val columnWidth = dp(150)
         entries.forEachIndexed { index, (label, color) ->
@@ -210,22 +211,81 @@ class DailyTrafficChartView(context: Context) : View(context) {
         )
     }
 
-    private fun drawSuspiciousValue(
+    private fun drawStackedHits(
         canvas: Canvas,
-        centerX: Float,
-        value: Int,
+        left: Float,
+        hits: Int,
+        suspicious: Int,
         maxValue: Int,
         chartTop: Float,
-        chartBottom: Float
+        chartBottom: Float,
+        barWidth: Float
     ) {
-        if (value <= 0) return
-        val barHeight = (value.toFloat() / maxValue) * (chartBottom - chartTop)
+        if (hits <= 0) return
+        val suspiciousHits = suspicious.coerceIn(0, hits)
+        val normalHits = hits - suspiciousHits
+        val chartHeight = chartBottom - chartTop
+        val normalHeight = (normalHits.toFloat() / maxValue) * chartHeight
+        val totalHeight = (hits.toFloat() / maxValue) * chartHeight
+
+        if (normalHits > 0) {
+            paint.color = hitsColor
+            canvas.drawRoundRect(
+                RectF(
+                    left + dp(1),
+                    chartBottom - normalHeight,
+                    left + barWidth - dp(1),
+                    chartBottom
+                ),
+                dp(2).toFloat(),
+                dp(2).toFloat(),
+                paint
+            )
+        }
+        if (suspiciousHits > 0) {
+            paint.color = suspiciousColor
+            canvas.drawRoundRect(
+                RectF(
+                    left + dp(1),
+                    chartBottom - totalHeight,
+                    left + barWidth - dp(1),
+                    chartBottom - normalHeight
+                ),
+                dp(2).toFloat(),
+                dp(2).toFloat(),
+                paint
+            )
+            drawValueLabel(
+                canvas = canvas,
+                centerX = left + barWidth / 2f,
+                barValue = hits,
+                labelValue = suspiciousHits,
+                maxValue = maxValue,
+                chartTop = chartTop,
+                chartBottom = chartBottom,
+                color = suspiciousColor
+            )
+        }
+    }
+
+    private fun drawValueLabel(
+        canvas: Canvas,
+        centerX: Float,
+        barValue: Int,
+        labelValue: Int,
+        maxValue: Int,
+        chartTop: Float,
+        chartBottom: Float,
+        color: Int
+    ) {
+        if (barValue <= 0) return
+        val barHeight = (barValue.toFloat() / maxValue) * (chartBottom - chartTop)
         val labelY = (chartBottom - barHeight - dp(4)).coerceAtLeast(chartTop + sp(9))
-        paint.color = suspiciousColor
+        paint.color = color
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = sp(9)
         paint.isFakeBoldText = true
-        canvas.drawText(numberFormat.format(value), centerX, labelY, paint)
+        canvas.drawText(numberFormat.format(labelValue), centerX, labelY, paint)
         paint.isFakeBoldText = false
     }
 
